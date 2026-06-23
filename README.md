@@ -14,10 +14,12 @@ Outputs are written to `rbn-evolution/outputs/` (PNG plots and `evolution.json`)
 
 ## Options
 
-`--n-genes`: 5(default) - Network size (genome length = n·2ⁿ bits)
-`--generations`: 1000(default) - Maximum number of evolutions
-`--mutation-probability`: 0.1(default) - bit mutation rate
-`--show-plots`: off(default) - Show plots instead of saving to `outputs/`
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--n-genes` | `5` | Network size (genome length = n·2ⁿ bits) |
+| `--generations` | `1000` | Maximum number of evolution steps |
+| `--mutation-probability` | `0.1` | Per-bit mutation rate |
+| `--show-plots` | off | Show plots on screen instead of saving to `outputs/` |
 
 ## Project layout
 
