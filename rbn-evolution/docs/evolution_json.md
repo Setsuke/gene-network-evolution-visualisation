@@ -18,7 +18,9 @@ Persists the full history of an evolutionary run to disk. During execution, that
 
 ## How it is generated
 
+```bash
 python demo.py --n-genes 5 --generations 1000 --mutation-probability 0.05
+```
 
 Notes:
 
@@ -30,6 +32,7 @@ Notes:
 
 ## Top-level schema
 
+```text
 evolution.json
 ├── schemaVersion          # format version
 ├── nGenes                 # n (genes / bits per state)
@@ -48,4 +51,4 @@ evolution.json
     ├── changedBits
     ├── contexts[]         # trajectories and fitness per context
     └── edgeTo[]           # compact transition table
-
+```
