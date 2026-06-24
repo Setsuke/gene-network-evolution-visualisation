@@ -8,6 +8,8 @@ Pipeline (see run_demo):
 
 from config import (
     DEFAULT_N_GENES,
+    CONTEXT_FITNESS_CSV,
+    CONTEXT_FITNESS_TXT,
     EVOLUTION_JSON,
     FINAL_LANDSCAPE_PLOT,
     FITNESS_HISTORY_PLOT,
@@ -17,6 +19,7 @@ from config import (
     get_contexts,
     prepare_output_dir,
 )
+from export_context_fitness import export_context_fitness_table
 from export_json import export_evolution_json
 from rbn.attractors import find_attractors, print_attractors
 from rbn.evolution import evolve_genome
@@ -30,7 +33,6 @@ def run_demo(
     mutation_probability: float = 0.1,
     generations: int = 1000,
     show_plots: bool = False,
-    verbose: bool = True,
 ) -> None:
     """
     Run the full rbn-evolution experiment.
@@ -43,44 +45,39 @@ def run_demo(
         4. Evolution — mutate genome; accept if fitness >= previous (contexts in config)
         5. Plots — fitness history + attractor landscapes (initial vs final)
         6. Export — evolution history written to outputs/evolution.json
+        7. Export — context fitness table (CSV + text)
     """
     if n_genes < 1:
         raise ValueError("n_genes must be at least 1")
-    
+
     # 0. Config: contexts for this network size
     contexts = get_contexts(n_genes)
 
-    if verbose:
-        print(f"Network size: n={n_genes} ({genome_length(n_genes)}-bit genome)")
-        print("Contexts:")
-        for initial, target in contexts.items():
-            print(f"  {initial} -> {target}")
+    print(f"Network size: n={n_genes} ({genome_length(n_genes)}-bit genome)")
+    print("Contexts:")
+    for initial, target in contexts.items():
+        print(f"  {initial} -> {target}")
 
     # 1. Truth table: random rules -> genome
-    if verbose:
-        print("\n[1/5] Generating truth table...")
+    print("\n[1/5] Generating truth table...")
     truth_table = generate_random_truth_table(n_genes)
-    if verbose:
-        print_truth_table(truth_table)
+    print_truth_table(truth_table)
 
     initial_genome = truth_table_to_genome(truth_table)
 
     # 2. Transition table: truth table + rotated-input rule
-    if verbose:
-        print("\n[2/5] Building transition table...")
+    print("\n[2/5] Building transition table...")
     initial_transition_table, _, _ = build_transition_table_from_genome(
         initial_genome, n_genes
     )
 
     # 3. Attractors: inspect initial state-transition diagram
-    if verbose:
-        print("\n[3/5] Detecting attractors (initial network)...")
+    print("\n[3/5] Detecting attractors (initial network)...")
     point_attractors, limit_cycles = find_attractors(initial_transition_table)
     print_attractors(point_attractors, limit_cycles)
 
     # 4. Evolution: fitness over contexts, bit-flip mutation
-    if verbose:
-        print("\n[4/5] Evolving genome...")
+    print("\n[4/5] Evolving genome...")
     history = evolve_genome(
         initial_genome=initial_genome,
         contexts=contexts,
@@ -89,12 +86,11 @@ def run_demo(
         n_genes=n_genes,
     )
 
-    # 5. Visualisation: fitness curve + attractor landscapes 
+    # 5. Visualisation: fitness curve + attractor landscapes
     if not show_plots:
         prepare_output_dir()
 
-    if verbose:
-        print("\n[5/5] Generating plots...")
+    print("\n[5/5] Generating plots...")
     plot_fitness_history(
         history,
         None if show_plots else FITNESS_HISTORY_PLOT,
@@ -110,11 +106,12 @@ def run_demo(
         None if show_plots else FINAL_LANDSCAPE_PLOT,
     )
 
-    # 6. Export: evolution history to JSON
+    # 6. Export: evolution history to JSON and context fitness table
     export_path = None if show_plots else EVOLUTION_JSON
+    context_fitness_csv = None if show_plots else CONTEXT_FITNESS_CSV
+    context_fitness_txt = None if show_plots else CONTEXT_FITNESS_TXT
     if export_path is not None:
-        if verbose:
-            print("\n[6/6] Exporting evolution JSON...")
+        print("\n[6/7] Exporting evolution JSON...")
         export_evolution_json(
             history=history,
             contexts=contexts,
@@ -122,6 +119,14 @@ def run_demo(
             output_path=export_path,
             mutation_probability=mutation_probability,
             generations_requested=generations,
+        )
+    if context_fitness_csv is not None:
+        print("\n[7/7] Exporting context fitness table...")
+        export_context_fitness_table(
+            history=history,
+            contexts=contexts,
+            csv_path=context_fitness_csv,
+            txt_path=context_fitness_txt,
         )
 
     print("\nDone.")
@@ -133,6 +138,9 @@ def run_demo(
     print(f"Accepted generations: {sum(1 for record in history if record['accepted'])}")
     if export_path is not None:
         print(f"Evolution JSON: {export_path}")
+    if context_fitness_csv is not None:
+        print(f"Context fitness CSV: {context_fitness_csv}")
+        print(f"Context fitness table: {context_fitness_txt}")
 
 
 if __name__ == "__main__":
