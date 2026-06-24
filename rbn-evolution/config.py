@@ -12,6 +12,8 @@ FITNESS_HISTORY_PLOT = OUTPUT_DIR / "fitness_history.png"
 INITIAL_LANDSCAPE_PLOT = OUTPUT_DIR / "initial_attractor_landscape.png"
 FINAL_LANDSCAPE_PLOT = OUTPUT_DIR / "final_attractor_landscape.png"
 EVOLUTION_JSON = OUTPUT_DIR / "evolution.json"
+CONTEXT_FITNESS_CSV = OUTPUT_DIR / "context_fitness.csv"
+CONTEXT_FITNESS_TXT = OUTPUT_DIR / "context_fitness.txt"
 
 RUN_PLOTS = (
     FITNESS_HISTORY_PLOT,
@@ -19,15 +21,28 @@ RUN_PLOTS = (
     FINAL_LANDSCAPE_PLOT,
 )
 
-RUN_EXPORTS = RUN_PLOTS + (EVOLUTION_JSON,)
+RUN_EXPORTS = RUN_PLOTS + (
+    EVOLUTION_JSON,
+    CONTEXT_FITNESS_CSV,
+    CONTEXT_FITNESS_TXT,
+)
 
 # Fitness contexts by n
 # Each entry: initial_state -> target_state
 
 CONTEXTS_BY_N: dict[int, Contexts] = {
+    3: {
+        "000": "010",
+        "100": "101",
+    },
+    4: {
+        "0000": "0101",
+        "1000": "1010",
+    },
     5: {
         "00000": "01010",
         "10000": "10101",
+        #"10001": "01110",
     },
     6: {
         "000000": "010101",
