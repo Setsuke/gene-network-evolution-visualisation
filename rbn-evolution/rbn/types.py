@@ -48,6 +48,8 @@ class ContextDetails(TypedDict):
     path: List[State]
     cycle: List[State]
     fitness: float
+    gene_scores: List[float]
+    cycle_length: int
 
 
 # Details for all contexts

@@ -48,6 +48,10 @@ def _serialize_context_details(
                 "path": list(path),
                 "cycle": list(cycle),
                 "fitness": float(context_details["fitness"]),
+                "geneScores": list(context_details.get("gene_scores", [])),
+                "cycleLength": int(
+                    context_details.get("cycle_length", len(cycle))
+                ),
             }
         )
     return entries
@@ -141,3 +145,49 @@ def export_evolution_json(
         json.dump(payload, handle, indent=2)
 
     return output_path
+
+
+def load_evolution_json(path: str | Path) -> tuple[list[GenerationRecord], Contexts, int]:
+    """Load evolution history and contexts from an exported JSON file."""
+    path = Path(path)
+    with path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    contexts: Contexts = {
+        entry["initial"]: entry["target"] for entry in payload["contexts"]
+    }
+    n_genes = int(payload["nGenes"])
+    history: list[GenerationRecord] = []
+
+    for record in payload["generations"]:
+        details: dict[State, dict[str, object]] = {}
+        for context_record in record["contexts"]:
+            initial = context_record["initial"]
+            cycle = list(context_record["cycle"])
+            target = context_record["target"]
+            gene_scores = context_record.get("geneScores")
+            details[initial] = {
+                "target": target,
+                "path": list(context_record["path"]),
+                "cycle": cycle,
+                "fitness": float(context_record["fitness"]),
+                "gene_scores": gene_scores,
+                "cycle_length": int(
+                    context_record.get("cycleLength", len(cycle))
+                ),
+            }
+
+        history.append(
+            {
+                "generation": int(record["generation"]),
+                "genome": record["genome"],
+                "fitness": float(record["fitness"]),
+                "candidate_fitness": float(record["candidateFitness"]),
+                "accepted": bool(record["accepted"]),
+                "changed_bits": int(record["changedBits"]),
+                "transition_table": {},
+                "details": details,
+            }
+        )
+
+    return history, contexts, n_genes

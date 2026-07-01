@@ -35,4 +35,21 @@ def parse_args():
         help="Show plots interactively instead of only saving PNG files.",
     )
 
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=1,
+        help="Number of independent runs to execute (outputs go to outputs/runs/run_001/ when runs > 1).",
+    )
+
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=None,
+        help=(
+            "Parallel workers for batch runs. Default: auto from CPU and RAM "
+            "(reserves ~28 GB for OS/Unity/IDE and ~3 GB per run)."
+        ),
+    )
+
     return parser.parse_args()
