@@ -4,23 +4,20 @@ from rbn.attractors import trace_path_until_cycle
 from rbn.types import Contexts, State, TransitionTable
 
 
-def compute_context_fitness(cycle: List[State], target_state: State) -> float:
+def compute_gene_scores(cycle: List[State], target_state: State) -> List[float]:
     """
-    Compute fitness for one context.
+    Per-gene scores for one context attractor cycle.
 
-    If target bit is 1, the gene should be expressed often in the attractor.
-    If target bit is 0, the gene should be unexpressed often in the attractor.
-
-    The final score is the product of all gene-level scores.
+    If target bit is 1, score = expression average in the cycle.
+    If target bit is 0, score = 1 - expression average.
     """
     if not cycle:
-        return 0.0
+        return [0.0] * len(target_state)
 
-    n_genes = len(target_state)
     cycle_length = len(cycle)
     gene_scores: List[float] = []
 
-    for gene_index in range(n_genes):
+    for gene_index in range(len(target_state)):
         expression_average = (
             sum(int(state[gene_index]) for state in cycle) / cycle_length
         )
@@ -33,10 +30,19 @@ def compute_context_fitness(cycle: List[State], target_state: State) -> float:
 
         gene_scores.append(score)
 
+    return gene_scores
+
+
+def compute_context_fitness(cycle: List[State], target_state: State) -> float:
+    """
+    Compute fitness for one context.
+
+    The final score is the product of all gene-level scores.
+    """
+    gene_scores = compute_gene_scores(cycle, target_state)
     fitness = 1.0
     for score in gene_scores:
         fitness *= score
-
     return fitness
 
 
@@ -65,6 +71,8 @@ def compute_total_fitness(
             "path": path,
             "cycle": cycle,
             "fitness": context_fitness,
+            "gene_scores": compute_gene_scores(cycle, target_state),
+            "cycle_length": len(cycle),
         }
 
         total_fitness *= context_fitness

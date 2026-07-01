@@ -19,14 +19,8 @@ Persists the full history of an evolutionary run to disk. During execution, that
 ## How it is generated
 
 ```bash
-python demo.py --n-genes 5 --generations 1000 --mutation-probability 0.05
+python demo.py --n-genes 5 --generations 10000 --mutation-probability 0.1 --runs 100
 ```
-
-Notes:
-
-- Written to `outputs/evolution.json`
-- `prepare_output_dir()` deletes the previous JSON at the start of a run (along with PNGs)
-- With `--show-plots`, export is skipped (interactive windows only)
 
 ---
 

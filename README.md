@@ -7,7 +7,7 @@ MSc Advanced Computer Science dissertation project: Interactive 3D visualisation
 ```bash
 cd rbn-evolution
 pip install matplotlib networkx
-python demo.py --n-genes 5 --generations 10000 --mutation-probability 0.05 
+python demo.py --n-genes 5 --generations 10000 --mutation-probability 0.1 --runs 100
 ```
 
 Outputs are written to `rbn-evolution/outputs/` (PNG plots and `evolution.json`). Use `--show-plots` to view graphs on screen without saving files.
@@ -20,6 +20,7 @@ Outputs are written to `rbn-evolution/outputs/` (PNG plots and `evolution.json`)
 | `--generations` | `1000` | Maximum number of evolution steps |
 | `--mutation-probability` | `0.1` | Per-bit mutation rate |
 | `--show-plots` | off | Show plots on screen instead of saving to `outputs/` |
+| `--runs` | `1` | Number of independent runs |
 
 ## Project layout
 

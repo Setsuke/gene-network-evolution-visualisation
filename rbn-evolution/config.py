@@ -1,12 +1,15 @@
 """Project configuration: defaults, contexts, and output paths."""
 
+from dataclasses import dataclass
 from pathlib import Path
+import shutil
 
 from rbn.types import Contexts, State
 
 DEFAULT_N_GENES = 5
 
 OUTPUT_DIR = Path("outputs")
+RUNS_OUTPUT_DIR = OUTPUT_DIR / "runs"
 
 FITNESS_HISTORY_PLOT = OUTPUT_DIR / "fitness_history.png"
 INITIAL_LANDSCAPE_PLOT = OUTPUT_DIR / "initial_attractor_landscape.png"
@@ -14,6 +17,17 @@ FINAL_LANDSCAPE_PLOT = OUTPUT_DIR / "final_attractor_landscape.png"
 EVOLUTION_JSON = OUTPUT_DIR / "evolution.json"
 CONTEXT_FITNESS_CSV = OUTPUT_DIR / "context_fitness.csv"
 CONTEXT_FITNESS_TXT = OUTPUT_DIR / "context_fitness.txt"
+EVOLUTIONARY_LANDSCAPE_PLOT = OUTPUT_DIR / "evolutionary_landscape.png"
+EVOLUTIONARY_LANDSCAPE_CSV = OUTPUT_DIR / "evolutionary_landscape.csv"
+BATCH_FITNESS_LOAD_HEATMAP_PLOT = OUTPUT_DIR / "batch_fitness_load_heatmap.png"
+BATCH_FITNESS_LOAD_HEATMAP_CSV = OUTPUT_DIR / "batch_fitness_load_heatmap.csv"
+FACTOR_COMPLETION_LANDSCAPE_PLOT = OUTPUT_DIR / "factor_completion_landscape.png"
+FACTOR_COMPLETION_LANDSCAPE_CSV = OUTPUT_DIR / "factor_completion_landscape.csv"
+
+UNITY_STREAMING_ASSETS_DIR = Path(
+    r"C:\2026\DissertationProject\unity\rbn-visualisation\Assets\StreamingAssets"
+)
+UNITY_TRAJECTORIES_JSON = UNITY_STREAMING_ASSETS_DIR / "unity_trajectories.json"
 
 RUN_PLOTS = (
     FITNESS_HISTORY_PLOT,
@@ -25,8 +39,105 @@ RUN_EXPORTS = RUN_PLOTS + (
     EVOLUTION_JSON,
     CONTEXT_FITNESS_CSV,
     CONTEXT_FITNESS_TXT,
+    Path("factorised_fitness_trajectory.png"),
+    Path("factorised_fitness_trajectory.csv"),
 )
 
+BATCH_EXPORTS = (
+    EVOLUTIONARY_LANDSCAPE_PLOT,
+    EVOLUTIONARY_LANDSCAPE_CSV,
+    BATCH_FITNESS_LOAD_HEATMAP_PLOT,
+    BATCH_FITNESS_LOAD_HEATMAP_CSV,
+    FACTOR_COMPLETION_LANDSCAPE_PLOT,
+    FACTOR_COMPLETION_LANDSCAPE_CSV,
+)
+
+
+@dataclass(frozen=True)
+class RunOutputPaths:
+    run_dir: Path
+    fitness_history_plot: Path
+    initial_landscape_plot: Path
+    final_landscape_plot: Path
+    evolution_json: Path
+    context_fitness_csv: Path
+    context_fitness_txt: Path
+    factorised_trajectory_plot: Path
+    factorised_trajectory_csv: Path
+
+    @property
+    def export_paths(self) -> tuple[Path, ...]:
+        return (
+            self.fitness_history_plot,
+            self.initial_landscape_plot,
+            self.final_landscape_plot,
+            self.evolution_json,
+            self.context_fitness_csv,
+            self.context_fitness_txt,
+            self.factorised_trajectory_plot,
+            self.factorised_trajectory_csv,
+        )
+
+
+def get_run_output_paths(run_index: int, runs: int) -> RunOutputPaths:
+    """Return output paths for a single run (flat outputs/ when runs=1)."""
+    if run_index < 1 or run_index > runs:
+        raise ValueError(f"run_index must be between 1 and {runs}, got {run_index}")
+    if runs < 1:
+        raise ValueError("runs must be at least 1")
+
+    run_dir = (
+        OUTPUT_DIR
+        if runs == 1
+        else RUNS_OUTPUT_DIR / f"run_{run_index:03d}"
+    )
+    return RunOutputPaths(
+        run_dir=run_dir,
+        fitness_history_plot=run_dir / "fitness_history.png",
+        initial_landscape_plot=run_dir / "initial_attractor_landscape.png",
+        final_landscape_plot=run_dir / "final_attractor_landscape.png",
+        evolution_json=run_dir / "evolution.json",
+        context_fitness_csv=run_dir / "context_fitness.csv",
+        context_fitness_txt=run_dir / "context_fitness.txt",
+        factorised_trajectory_plot=run_dir / "factorised_fitness_trajectory.png",
+        factorised_trajectory_csv=run_dir / "factorised_fitness_trajectory.csv",
+    )
+
+
+def prepare_batch_outputs(runs: int) -> None:
+    """Clear previous batch outputs before starting a multi-run or single-run batch."""
+    if runs < 1:
+        raise ValueError("runs must be at least 1")
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    if runs == 1:
+        for export_path in RUN_EXPORTS + BATCH_EXPORTS:
+            if export_path.exists():
+                export_path.unlink()
+        return
+
+    for child in OUTPUT_DIR.iterdir():
+        if child.is_dir() and child.name == "runs":
+            shutil.rmtree(child)
+        elif child.is_dir() and child.name.startswith("run_"):
+            shutil.rmtree(child)
+        elif child.is_file() and child.name in {
+            *(path.name for path in RUN_EXPORTS),
+            *(path.name for path in BATCH_EXPORTS),
+        }:
+            child.unlink()
+
+    RUNS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def prepare_run_output_dir(paths: RunOutputPaths) -> Path:
+    """Ensure the run output directory exists and remove stale files for this run."""
+    paths.run_dir.mkdir(parents=True, exist_ok=True)
+    for export_path in paths.export_paths:
+        if export_path.exists():
+            export_path.unlink()
+    return paths.run_dir
 # Fitness contexts by n
 # Each entry: initial_state -> target_state
 
@@ -109,15 +220,9 @@ def generated_contexts(n_genes: int) -> Contexts:
 
 
 def prepare_output_dir() -> Path:
-    """Ensure outputs/ exists and remove stale plots from the previous run."""
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    for plot_path in RUN_EXPORTS:
-        if plot_path.exists():
-            plot_path.unlink()
-
+    """Ensure outputs/ exists and remove stale files from a single-run layout."""
+    prepare_batch_outputs(runs=1)
     return OUTPUT_DIR
-
 
 def _validate_contexts(contexts: Contexts, n_genes: int) -> None:
     for initial, target in contexts.items():
