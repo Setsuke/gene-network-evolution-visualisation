@@ -6,7 +6,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+from rbn.fitness import build_factor_scores
 from rbn.types import Contexts, GenerationRecord, State, TransitionTable
+from visualisation.factorised.metrics import (
+    extract_accepted_trajectory_metrics,
+    factor_row_labels,
+)
 
 SCHEMA_VERSION = 1
 
@@ -57,6 +62,26 @@ def _serialize_context_details(
     return entries
 
 
+def _deserialize_context_details(
+    context_records: list[dict[str, Any]],
+) -> dict[State, dict[str, object]]:
+    details: dict[State, dict[str, object]] = {}
+    for context_record in context_records:
+        initial = context_record["initial"]
+        cycle = list(context_record["cycle"])
+        target = context_record["target"]
+        gene_scores = context_record.get("geneScores")
+        details[initial] = {
+            "target": target,
+            "path": list(context_record["path"]),
+            "cycle": cycle,
+            "fitness": float(context_record["fitness"]),
+            "gene_scores": gene_scores,
+            "cycle_length": int(context_record.get("cycleLength", len(cycle))),
+        }
+    return details
+
+
 def _serialize_generation(
     record: GenerationRecord,
     contexts: Contexts,
@@ -67,9 +92,9 @@ def _serialize_generation(
         "generation": record["generation"],
         "genome": record["genome"],
         "fitness": record["fitness"],
-        "candidateFitness": record["candidate_fitness"],
         "accepted": record["accepted"],
         "changedBits": record["changed_bits"],
+        "factorScores": list(record.get("factor_scores", [])),
         "contexts": _serialize_context_details(record["details"], contexts),
     }
     if include_edge_to:
@@ -93,6 +118,8 @@ def build_evolution_export(
 
     accepted_count = sum(1 for record in history if record["accepted"])
     rejected_count = len(history) - accepted_count
+    accepted_metrics = extract_accepted_trajectory_metrics(history, contexts)
+    factor_labels = factor_row_labels(contexts, n_genes)
 
     return {
         "schemaVersion": SCHEMA_VERSION,
@@ -106,11 +133,24 @@ def build_evolution_export(
             {"initial": initial, "target": target}
             for initial, target in contexts.items()
         ],
+        "factorLabels": factor_labels,
+        "acceptedGenomes": [
+            {
+                "acceptedStep": step.step_index,
+                "generation": step.generation,
+                "genome": step.genome,
+                "totalFitness": step.total_fitness,
+                "contextFitness": list(step.context_fitness),
+                "factorScores": list(step.factor_scores),
+            }
+            for step in accepted_metrics
+        ],
         "summary": {
             "initialFitness": history[0]["fitness"],
             "finalFitness": history[-1]["fitness"],
             "acceptedCount": accepted_count,
             "rejectedCount": rejected_count,
+            "acceptedGenomeCount": len(accepted_metrics),
         },
         "generations": [
             _serialize_generation(record, contexts, n_genes, include_edge_to)
@@ -145,49 +185,3 @@ def export_evolution_json(
         json.dump(payload, handle, indent=2)
 
     return output_path
-
-
-def load_evolution_json(path: str | Path) -> tuple[list[GenerationRecord], Contexts, int]:
-    """Load evolution history and contexts from an exported JSON file."""
-    path = Path(path)
-    with path.open("r", encoding="utf-8") as handle:
-        payload = json.load(handle)
-
-    contexts: Contexts = {
-        entry["initial"]: entry["target"] for entry in payload["contexts"]
-    }
-    n_genes = int(payload["nGenes"])
-    history: list[GenerationRecord] = []
-
-    for record in payload["generations"]:
-        details: dict[State, dict[str, object]] = {}
-        for context_record in record["contexts"]:
-            initial = context_record["initial"]
-            cycle = list(context_record["cycle"])
-            target = context_record["target"]
-            gene_scores = context_record.get("geneScores")
-            details[initial] = {
-                "target": target,
-                "path": list(context_record["path"]),
-                "cycle": cycle,
-                "fitness": float(context_record["fitness"]),
-                "gene_scores": gene_scores,
-                "cycle_length": int(
-                    context_record.get("cycleLength", len(cycle))
-                ),
-            }
-
-        history.append(
-            {
-                "generation": int(record["generation"]),
-                "genome": record["genome"],
-                "fitness": float(record["fitness"]),
-                "candidate_fitness": float(record["candidateFitness"]),
-                "accepted": bool(record["accepted"]),
-                "changed_bits": int(record["changedBits"]),
-                "transition_table": {},
-                "details": details,
-            }
-        )
-
-    return history, contexts, n_genes

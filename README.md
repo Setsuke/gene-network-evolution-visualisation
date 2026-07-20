@@ -6,7 +6,7 @@ MSc Advanced Computer Science dissertation project: Interactive 3D visualisation
 
 ```bash
 cd rbn-evolution
-pip install matplotlib networkx
+pip install matplotlib networkx umap-learn
 python demo.py --n-genes 5 --generations 10000 --mutation-probability 0.1 --runs 100
 ```
 

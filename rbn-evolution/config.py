@@ -9,47 +9,58 @@ from rbn.types import Contexts, State
 DEFAULT_N_GENES = 5
 
 OUTPUT_DIR = Path("outputs")
+DATA_OUTPUT_DIR = OUTPUT_DIR / "data"
 RUNS_OUTPUT_DIR = OUTPUT_DIR / "runs"
+RUN_DATA_SUBDIR = "data"
 
-FITNESS_HISTORY_PLOT = OUTPUT_DIR / "fitness_history.png"
-INITIAL_LANDSCAPE_PLOT = OUTPUT_DIR / "initial_attractor_landscape.png"
-FINAL_LANDSCAPE_PLOT = OUTPUT_DIR / "final_attractor_landscape.png"
-EVOLUTION_JSON = OUTPUT_DIR / "evolution.json"
-CONTEXT_FITNESS_CSV = OUTPUT_DIR / "context_fitness.csv"
-CONTEXT_FITNESS_TXT = OUTPUT_DIR / "context_fitness.txt"
-EVOLUTIONARY_LANDSCAPE_PLOT = OUTPUT_DIR / "evolutionary_landscape.png"
-EVOLUTIONARY_LANDSCAPE_CSV = OUTPUT_DIR / "evolutionary_landscape.csv"
+EVOLUTIONARY_GENOME_MDS_PATH_PLOT = OUTPUT_DIR / "evolutionary_genome_mds_path.png"
+EVOLUTIONARY_GENOME_MDS_PATH_CSV = DATA_OUTPUT_DIR / "evolutionary_genome_mds_path.csv"
+EVOLUTIONARY_GENOME_UMAP_PATH_PLOT = OUTPUT_DIR / "evolutionary_genome_umap_path.png"
+EVOLUTIONARY_GENOME_UMAP_PATH_CSV = DATA_OUTPUT_DIR / "evolutionary_genome_umap_path.csv"
+GENOME_MDS_UNITY_JSON = DATA_OUTPUT_DIR / "unity_genome_mds_path.json"
+GENOME_UMAP_UNITY_JSON = DATA_OUTPUT_DIR / "unity_genome_umap_path.json"
 BATCH_FITNESS_LOAD_HEATMAP_PLOT = OUTPUT_DIR / "batch_fitness_load_heatmap.png"
-BATCH_FITNESS_LOAD_HEATMAP_CSV = OUTPUT_DIR / "batch_fitness_load_heatmap.csv"
-FACTOR_COMPLETION_LANDSCAPE_PLOT = OUTPUT_DIR / "factor_completion_landscape.png"
-FACTOR_COMPLETION_LANDSCAPE_CSV = OUTPUT_DIR / "factor_completion_landscape.csv"
+BATCH_FITNESS_LOAD_HEATMAP_CSV = DATA_OUTPUT_DIR / "batch_fitness_load_heatmap.csv"
+NEUTRAL_MOVE_SUMMARY_TABLE = OUTPUT_DIR / "neutral_move_summary_table.png"
+NEUTRAL_MOVE_SUMMARY_CSV = DATA_OUTPUT_DIR / "neutral_move_summary.csv"
+NEUTRAL_MOVE_BAR_CHART_PLOT = OUTPUT_DIR / "neutral_move_bar_chart.png"
+NON_NEUTRAL_MOVE_SUMMARY_TABLE = OUTPUT_DIR / "non_neutral_move_summary_table.png"
+NON_NEUTRAL_MOVE_SUMMARY_CSV = DATA_OUTPUT_DIR / "non_neutral_move_summary.csv"
+FACTOR_CHANGING_NEUTRAL_SUMMARY_TABLE = OUTPUT_DIR / "factor_changing_neutral_moves_summary_table.png"
+FACTOR_CHANGING_NEUTRAL_SUMMARY_CSV = DATA_OUTPUT_DIR / "factor_changing_neutral_moves_summary.csv"
+ACCEPTED_MOVES_HIERARCHY_FLOW = (
+    OUTPUT_DIR / "Classification of Accepted Evolutionary Moves.png"
+)
+ACCEPTED_MUTATION_CANDIDATES_BY_MOVE_TYPE_PLOT = (
+    OUTPUT_DIR / "accepted_mutation_candidates_by_move_type.png"
+)
+ACCEPTED_MOVES_HIERARCHY_CSV = DATA_OUTPUT_DIR / "accepted_moves_hierarchy.csv"
+ACCEPTED_MOVES_HIERARCHY_TXT = DATA_OUTPUT_DIR / "accepted_moves_hierarchy_breakdown.txt"
+EVOLUTION_PROGRESS_BREAKDOWN_PLOT = OUTPUT_DIR / "evolution_progress_breakdown.png"
+EVOLUTION_PROGRESS_BREAKDOWN_CSV = DATA_OUTPUT_DIR / "evolution_progress_breakdown.csv"
+ACCEPTED_MOVE_TRANSITIONS_CSV = DATA_OUTPUT_DIR / "accepted_move_transitions.csv"
+ACCEPTED_MOVE_TRANSITION_COUNTS_CSV = DATA_OUTPUT_DIR / "accepted_move_transition_counts.csv"
+ACCEPTED_MOVE_TRANSITION_MATRIX_CSV = DATA_OUTPUT_DIR / "accepted_move_transition_matrix.csv"
+ACCEPTED_MOVE_TRANSITION_HEATMAP = OUTPUT_DIR / "accepted_move_transition_heatmap.png"
+PRE_SOLUTION_FITNESS_DISTRIBUTION_PLOT = OUTPUT_DIR / "pre_solution_fitness_distribution.png"
+PRE_SOLUTION_FITNESS_DISTRIBUTION_CSV = DATA_OUTPUT_DIR / "pre_solution_fitness_distribution.csv"
 
 UNITY_STREAMING_ASSETS_DIR = Path(
     r"C:\2026\DissertationProject\unity\rbn-visualisation\Assets\StreamingAssets"
 )
 UNITY_TRAJECTORIES_JSON = UNITY_STREAMING_ASSETS_DIR / "unity_trajectories.json"
-
-RUN_PLOTS = (
-    FITNESS_HISTORY_PLOT,
-    INITIAL_LANDSCAPE_PLOT,
-    FINAL_LANDSCAPE_PLOT,
+UNITY_GENOME_MDS_JSON = UNITY_STREAMING_ASSETS_DIR / "unity_genome_mds_path.json"
+UNITY_GENOME_UMAP_JSON = UNITY_STREAMING_ASSETS_DIR / "unity_genome_umap_path.json"
+BOOLEAN_STATE_MDS_LAYOUT_JSON = OUTPUT_DIR / "boolean_state_mds_layout.json"
+BOOLEAN_STATE_MDS_LAYOUT_CSV = DATA_OUTPUT_DIR / "boolean_state_mds_layout.csv"
+UNITY_BOOLEAN_STATE_MDS_LAYOUT_JSON = (
+    UNITY_STREAMING_ASSETS_DIR / "boolean_state_mds_layout.json"
 )
-
-RUN_EXPORTS = RUN_PLOTS + (
-    EVOLUTION_JSON,
-    CONTEXT_FITNESS_CSV,
-    CONTEXT_FITNESS_TXT,
-    Path("factorised_fitness_trajectory.png"),
-    Path("factorised_fitness_trajectory.csv"),
+UNITY_BOOLEAN_ATTRACTOR_LANDSCAPE_JSON = (
+    OUTPUT_DIR / "unity_boolean_attractor_landscape.json"
 )
-
-BATCH_EXPORTS = (
-    EVOLUTIONARY_LANDSCAPE_PLOT,
-    EVOLUTIONARY_LANDSCAPE_CSV,
-    BATCH_FITNESS_LOAD_HEATMAP_PLOT,
-    BATCH_FITNESS_LOAD_HEATMAP_CSV,
-    FACTOR_COMPLETION_LANDSCAPE_PLOT,
-    FACTOR_COMPLETION_LANDSCAPE_CSV,
+UNITY_STREAMING_BOOLEAN_ATTRACTOR_LANDSCAPE_JSON = (
+    UNITY_STREAMING_ASSETS_DIR / "unity_boolean_attractor_landscape.json"
 )
 
 
@@ -62,8 +73,10 @@ class RunOutputPaths:
     evolution_json: Path
     context_fitness_csv: Path
     context_fitness_txt: Path
+    accepted_fitness_plot: Path
     factorised_trajectory_plot: Path
     factorised_trajectory_csv: Path
+    factor_delta_plot: Path
 
     @property
     def export_paths(self) -> tuple[Path, ...]:
@@ -74,8 +87,10 @@ class RunOutputPaths:
             self.evolution_json,
             self.context_fitness_csv,
             self.context_fitness_txt,
+            self.accepted_fitness_plot,
             self.factorised_trajectory_plot,
             self.factorised_trajectory_csv,
+            self.factor_delta_plot,
         )
 
 
@@ -91,49 +106,44 @@ def get_run_output_paths(run_index: int, runs: int) -> RunOutputPaths:
         if runs == 1
         else RUNS_OUTPUT_DIR / f"run_{run_index:03d}"
     )
+    data_dir = run_dir / RUN_DATA_SUBDIR
     return RunOutputPaths(
         run_dir=run_dir,
         fitness_history_plot=run_dir / "fitness_history.png",
         initial_landscape_plot=run_dir / "initial_attractor_landscape.png",
         final_landscape_plot=run_dir / "final_attractor_landscape.png",
         evolution_json=run_dir / "evolution.json",
-        context_fitness_csv=run_dir / "context_fitness.csv",
-        context_fitness_txt=run_dir / "context_fitness.txt",
+        context_fitness_csv=data_dir / "context_fitness.csv",
+        context_fitness_txt=data_dir / "context_fitness.txt",
+        accepted_fitness_plot=run_dir / "accepted_fitness_trajectory.png",
         factorised_trajectory_plot=run_dir / "factorised_fitness_trajectory.png",
-        factorised_trajectory_csv=run_dir / "factorised_fitness_trajectory.csv",
+        factorised_trajectory_csv=data_dir / "factorised_fitness_trajectory.csv",
+        factor_delta_plot=run_dir / "factor_delta_heatmap.png",
     )
 
 
 def prepare_batch_outputs(runs: int) -> None:
-    """Clear previous batch outputs before starting a multi-run or single-run batch."""
+    """Remove all previous outputs before starting a new run or batch."""
     if runs < 1:
         raise ValueError("runs must be at least 1")
 
+    if OUTPUT_DIR.exists():
+        for child in OUTPUT_DIR.iterdir():
+            if child.is_dir():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    if runs == 1:
-        for export_path in RUN_EXPORTS + BATCH_EXPORTS:
-            if export_path.exists():
-                export_path.unlink()
-        return
-
-    for child in OUTPUT_DIR.iterdir():
-        if child.is_dir() and child.name == "runs":
-            shutil.rmtree(child)
-        elif child.is_dir() and child.name.startswith("run_"):
-            shutil.rmtree(child)
-        elif child.is_file() and child.name in {
-            *(path.name for path in RUN_EXPORTS),
-            *(path.name for path in BATCH_EXPORTS),
-        }:
-            child.unlink()
-
-    RUNS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    if runs > 1:
+        RUNS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def prepare_run_output_dir(paths: RunOutputPaths) -> Path:
     """Ensure the run output directory exists and remove stale files for this run."""
     paths.run_dir.mkdir(parents=True, exist_ok=True)
+    paths.context_fitness_csv.parent.mkdir(parents=True, exist_ok=True)
     for export_path in paths.export_paths:
         if export_path.exists():
             export_path.unlink()
@@ -177,13 +187,6 @@ def genome_length(n_genes: int) -> int:
     return (1 << n_genes) * n_genes
 
 
-def state_count(n_genes: int) -> int:
-    """Number of binary states in the state space."""
-    if n_genes < 1:
-        raise ValueError("n_genes must be at least 1")
-    return 1 << n_genes
-
-
 def get_contexts(n_genes: int) -> Contexts:
     """Return fitness contexts configured for n_genes."""
     if n_genes not in CONTEXTS_BY_N:
@@ -198,31 +201,6 @@ def get_contexts(n_genes: int) -> Contexts:
     _validate_contexts(contexts, n_genes)
     return dict(contexts)
 
-
-def generated_contexts(n_genes: int) -> Contexts:
-    """
-    Auto-generated alternating anterior/posterior contexts.
-
-    Useful as a starting template when adding a new n to CONTEXTS_BY_N.
-    """
-    if n_genes < 1:
-        raise ValueError("n_genes must be at least 1")
-
-    posterior_initial: State = "0" * n_genes
-    posterior_target: State = "".join(str(index % 2) for index in range(n_genes))
-    anterior_initial: State = "1" + "0" * (n_genes - 1)
-    anterior_target: State = "".join(str((index + 1) % 2) for index in range(n_genes))
-
-    return {
-        posterior_initial: posterior_target,
-        anterior_initial: anterior_target,
-    }
-
-
-def prepare_output_dir() -> Path:
-    """Ensure outputs/ exists and remove stale files from a single-run layout."""
-    prepare_batch_outputs(runs=1)
-    return OUTPUT_DIR
 
 def _validate_contexts(contexts: Contexts, n_genes: int) -> None:
     for initial, target in contexts.items():

@@ -70,16 +70,16 @@ class GenerationRecord(TypedDict):
     Information stored for one evolutionary generation.
 
     genome/fitness/transition_table/details always describe the best accepted
-    network so far. candidate_fitness/changed_bits describe the latest attempt.
+    network so far.
     """
     generation: int
     genome: Genome
     fitness: float
     accepted: bool
     changed_bits: int
-    candidate_fitness: float
     transition_table: TransitionTable
     details: AllContextDetails
+    factor_scores: List[float]
 
 
 # Full evolution history

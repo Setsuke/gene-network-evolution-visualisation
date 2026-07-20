@@ -2,7 +2,7 @@ import random
 from typing import List
 
 from rbn.transition_table import build_transition_table_from_genome
-from rbn.fitness import compute_total_fitness
+from rbn.fitness import build_factor_scores, compute_total_fitness
 from rbn.types import Contexts, GenerationRecord, Genome
 
 
@@ -66,9 +66,9 @@ def evolve_genome(
             "fitness": current_fitness,
             "accepted": True,
             "changed_bits": 0,
-            "candidate_fitness": current_fitness,
             "transition_table": current_transition_table,
             "details": current_details,
+            "factor_scores": build_factor_scores(current_details, contexts),
         }
     ]
 
@@ -99,9 +99,9 @@ def evolve_genome(
                 "fitness": current_fitness,
                 "accepted": accepted,
                 "changed_bits": changed_bits,
-                "candidate_fitness": candidate_fitness,
                 "transition_table": current_transition_table,
                 "details": current_details,
+                "factor_scores": build_factor_scores(current_details, contexts),
             }
         )
 

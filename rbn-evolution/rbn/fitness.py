@@ -4,6 +4,23 @@ from rbn.attractors import trace_path_until_cycle
 from rbn.types import Contexts, State, TransitionTable
 
 
+def build_factor_scores(
+    context_details: Dict[State, Dict[str, object]],
+    contexts: Contexts,
+) -> List[float]:
+    """
+    Flat fitness-factor vector for one genome.
+
+    Order: context 1 gene 0..n-1, context 2 gene 0..n-1, ...
+    Each factor score is the per-gene score within its context.
+    """
+    factor_scores: List[float] = []
+    for initial_state in contexts:
+        gene_scores = context_details[initial_state]["gene_scores"]
+        factor_scores.extend(float(score) for score in gene_scores)
+    return factor_scores
+
+
 def compute_gene_scores(cycle: List[State], target_state: State) -> List[float]:
     """
     Per-gene scores for one context attractor cycle.
