@@ -1,6 +1,6 @@
-# RBN Visualisation (Unity)
+# Gene network evolution visualisation (Unity)
 
-Unity **6000.3.17f1** project for interactive 3D exploration of RBN evolution outputs.
+Unity **6000.3.17f1** viewer for the dissertation *Understanding Punctuated Equilibria through the Visualisation of Gene Network Evolution* — interactive 3D exploration of evolved random Boolean network runs.
 
 ## Setup
 
