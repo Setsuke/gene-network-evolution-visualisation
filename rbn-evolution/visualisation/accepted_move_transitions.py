@@ -8,15 +8,12 @@ from itertools import groupby
 from pathlib import Path
 
 try:
-    import matplotlib.pyplot as plt
     import numpy as np
 except ImportError:
-    plt = None
     np = None
 
 from rbn.types import Contexts, EvolutionHistory
 from visualisation.accepted_move_taxonomy import (
-    TOP_LEVEL_MOVE_CATEGORY_LABELS,
     TOP_LEVEL_MOVE_CATEGORY_ORDER,
     TopLevelMoveCategory,
     classify_top_level_accepted_move_category,
@@ -32,9 +29,9 @@ class AcceptedMoveTransitionRow:
     next_category: TopLevelMoveCategory | None = None
 
 
-def _require_matplotlib() -> None:
-    if plt is None or np is None:
-        raise ImportError("matplotlib and numpy are required for transition heatmaps")
+def _require_numpy() -> None:
+    if np is None:
+        raise ImportError("numpy is required for accepted move transition tables")
 
 
 def build_accepted_move_category_rows(
@@ -92,7 +89,7 @@ def build_transition_rows(
 def build_transition_matrices(
     transition_rows: list[AcceptedMoveTransitionRow],
 ) -> tuple[np.ndarray, np.ndarray]:
-    _require_matplotlib()
+    _require_numpy()
     category_index = {
         category: index for index, category in enumerate(TOP_LEVEL_MOVE_CATEGORY_ORDER)
     }
@@ -155,24 +152,16 @@ def _write_matrix_csv(
             )
 
 
-def plot_accepted_move_transition_heatmap(
+def export_accepted_move_transition_tables(
     histories: list[EvolutionHistory],
     contexts: Contexts,
-    save_path: str | Path,
     *,
     labels: list[str] | None = None,
     moves_csv_path: str | Path | None = None,
     counts_csv_path: str | Path | None = None,
     percentages_csv_path: str | Path | None = None,
-) -> Path:
-    """
-    Build and visualise accepted move category transitions.
-
-    Rows are ordered by run_id and accepted_step. For each run, next_category
-    is the following accepted move in that run only. The heatmap shows row-normalised
-    transition probabilities: given the current category, what came next.
-    """
-    _require_matplotlib()
+) -> None:
+    """Export accepted move category transition tables as CSV files."""
     if not histories:
         raise ValueError("histories must contain at least one run")
 
@@ -182,8 +171,6 @@ def plot_accepted_move_transition_heatmap(
         raise ValueError("no accepted move transitions found")
 
     counts, percentages = build_transition_matrices(transition_rows)
-    save_path = Path(save_path)
-    save_path.parent.mkdir(parents=True, exist_ok=True)
 
     if moves_csv_path is not None:
         _write_move_table_csv(all_rows, Path(moves_csv_path))
@@ -195,63 +182,3 @@ def plot_accepted_move_transition_heatmap(
             Path(percentages_csv_path),
             value_format="{:.2f}",
         )
-
-    category_labels = [
-        TOP_LEVEL_MOVE_CATEGORY_LABELS[category]
-        for category in TOP_LEVEL_MOVE_CATEGORY_ORDER
-    ]
-
-    figure, axis = plt.subplots(figsize=(10.5, 8.5))
-    image = axis.imshow(
-        percentages,
-        origin="upper",
-        cmap="Blues",
-        vmin=0.0,
-        vmax=100.0,
-        aspect="auto",
-    )
-
-    axis.set_xticks(np.arange(len(TOP_LEVEL_MOVE_CATEGORY_ORDER)))
-    axis.set_yticks(np.arange(len(TOP_LEVEL_MOVE_CATEGORY_ORDER)))
-    axis.set_xticklabels(category_labels, rotation=35, ha="right", fontsize=10)
-    axis.set_yticklabels(category_labels, fontsize=10)
-    axis.set_xlabel("Next category")
-    axis.set_ylabel("Current category")
-    axis.set_title("Accepted move category transitions")
-
-    for row_index in range(len(TOP_LEVEL_MOVE_CATEGORY_ORDER)):
-        for column_index in range(len(TOP_LEVEL_MOVE_CATEGORY_ORDER)):
-            value = percentages[row_index, column_index]
-            count = int(counts[row_index, column_index])
-            if count == 0:
-                continue
-            text_color = "white" if value >= 45.0 else "#0f172a"
-            axis.text(
-                column_index,
-                row_index,
-                f"{value:.1f}%\n(n={count})",
-                ha="center",
-                va="center",
-                fontsize=9,
-                color=text_color,
-            )
-
-    colorbar = figure.colorbar(image, ax=axis, fraction=0.046, pad=0.04)
-    colorbar.set_label("Row percentage (%)")
-
-    figure.text(
-        0.5,
-        0.02,
-        (
-            f"{len(histories)} runs  |  {len(transition_rows)} transitions  |  "
-            "each row sums to 100% within the current category"
-        ),
-        ha="center",
-        fontsize=10,
-        color="#475569",
-    )
-
-    figure.subplots_adjust(bottom=0.22)
-    figure.savefig(save_path, bbox_inches="tight", dpi=200, pad_inches=0.35)
-    plt.close(figure)
-    return save_path

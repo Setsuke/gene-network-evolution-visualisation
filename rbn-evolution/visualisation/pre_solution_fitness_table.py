@@ -1,4 +1,4 @@
-"""Distribution of total fitness values on accepted steps before fitness reaches 1.0."""
+"""Distribution of the last total fitness before a run reaches 1.0 (one value per run)."""
 
 from __future__ import annotations
 
@@ -29,21 +29,21 @@ class PreSolutionFitnessRow:
 class PreSolutionFitnessSummary:
     runs_total: int
     runs_reaching_perfect_fitness: int
-    pre_solution_steps: int
+    runs_in_distribution: int
     unique_fitness_values: int
     rows: tuple[PreSolutionFitnessRow, ...]
 
 
-def collect_pre_solution_fitness_values(
+def collect_last_pre_solution_fitness_per_run(
     histories: list[EvolutionHistory],
     contexts: Contexts,
     *,
     fitness_round_digits: int = 6,
 ) -> tuple[list[float], int, int]:
     """
-    Collect total fitness from accepted trajectory steps with fitness < 1.0.
+    Collect one total-fitness value per run: the last accepted genome with fitness < 1.0.
 
-    Only runs whose final accepted fitness is 1.0 contribute steps.
+    Only runs whose final accepted fitness is 1.0 contribute.
     """
     values: list[float] = []
     runs_reaching_perfect = 0
@@ -58,11 +58,15 @@ def collect_pre_solution_fitness_values(
 
         runs_reaching_perfect += 1
         metrics = extract_accepted_trajectory_metrics(history, contexts)
-        for step in metrics:
-            fitness = round(float(step.total_fitness), fitness_round_digits)
-            if fitness >= 1.0:
-                continue
-            values.append(fitness)
+        pre_solution_values = [
+            round(float(step.total_fitness), fitness_round_digits)
+            for step in metrics
+            if float(step.total_fitness) < 1.0
+        ]
+        if not pre_solution_values:
+            continue
+
+        values.append(pre_solution_values[-1])
 
     return values, len(histories), runs_reaching_perfect
 
@@ -73,13 +77,13 @@ def build_pre_solution_fitness_summary(
     *,
     fitness_round_digits: int = 6,
 ) -> PreSolutionFitnessSummary:
-    values, runs_total, runs_reaching_perfect = collect_pre_solution_fitness_values(
+    values, runs_total, runs_reaching_perfect = collect_last_pre_solution_fitness_per_run(
         histories,
         contexts,
         fitness_round_digits=fitness_round_digits,
     )
     counts = Counter(values)
-    total_steps = len(values)
+    runs_in_distribution = len(values)
 
     sorted_items = sorted(
         counts.items(),
@@ -91,7 +95,7 @@ def build_pre_solution_fitness_summary(
             rank=index + 1,
             total_fitness=fitness,
             count=count,
-            percentage=(100.0 * count / total_steps) if total_steps else 0.0,
+            percentage=(100.0 * count / runs_in_distribution) if runs_in_distribution else 0.0,
         )
         for index, (fitness, count) in enumerate(sorted_items)
     )
@@ -99,7 +103,7 @@ def build_pre_solution_fitness_summary(
     return PreSolutionFitnessSummary(
         runs_total=runs_total,
         runs_reaching_perfect_fitness=runs_reaching_perfect,
-        pre_solution_steps=total_steps,
+        runs_in_distribution=runs_in_distribution,
         unique_fitness_values=len(rows),
         rows=rows,
     )
@@ -109,7 +113,7 @@ def _write_summary_csv(summary: PreSolutionFitnessSummary, csv_path: Path) -> No
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["rank", "total_fitness", "count", "percentage"])
+        writer.writerow(["rank", "total_fitness", "run_count", "percentage_of_runs"])
         for row in summary.rows:
             writer.writerow(
                 [
@@ -140,7 +144,7 @@ def plot_pre_solution_fitness_table(
         _write_summary_csv(summary, Path(csv_path))
 
     display_rows = summary.rows[:max_rows]
-    headers = ["Rank", "Total fitness", "Count", "Percentage"]
+    headers = ["Rank", "Last fitness before 1.0", "Runs", "% of runs"]
     table_rows = [
         [
             row.rank,
@@ -159,7 +163,7 @@ def plot_pre_solution_fitness_table(
         colLabels=headers,
         loc="center",
         cellLoc="center",
-        colWidths=[0.12, 0.28, 0.18, 0.22],
+        colWidths=[0.12, 0.32, 0.16, 0.2],
     )
     _style_summary_table(
         table,
@@ -171,15 +175,15 @@ def plot_pre_solution_fitness_table(
     if summary.unique_fitness_values > max_rows:
         row_note = (
             f"Showing top {max_rows} of {summary.unique_fitness_values} "
-            "unique fitness values"
+            "unique last-fitness values"
         )
     else:
-        row_note = f"{summary.unique_fitness_values} unique fitness values"
+        row_note = f"{summary.unique_fitness_values} unique last-fitness values"
 
     figure.suptitle(
-        "Most common total fitness values before reaching 1.0\n"
+        "Most common last total fitness before reaching 1.0 (one value per run)\n"
         f"{summary.runs_reaching_perfect_fitness}/{summary.runs_total} runs reached "
-        f"fitness 1.0  |  {summary.pre_solution_steps} pre-solution accepted steps  |  "
+        f"fitness 1.0  |  {summary.runs_in_distribution} runs classified  |  "
         f"{row_note}",
         fontsize=11,
         y=0.98,

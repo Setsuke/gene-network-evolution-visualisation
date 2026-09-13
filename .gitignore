@@ -10,6 +10,12 @@ venv/
 rbn-evolution/outputs/*
 !rbn-evolution/outputs/.gitkeep
 
+# Logs
+*.log
+
+# Test cache
+.pytest_cache/
+
 # OS junk
 .DS_Store
 Thumbs.db

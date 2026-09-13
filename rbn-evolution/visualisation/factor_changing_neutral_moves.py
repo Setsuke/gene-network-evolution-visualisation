@@ -44,7 +44,22 @@ FACTOR_CHANGING_CATEGORY_ORDER: tuple[FactorChangingNeutralCategory, ...] = (
 COMPENSATORY_NEUTRAL_CHANGES = "Compensatory neutral changes"
 ZERO_MASKED_IMPROVEMENT = "Zero masked improvement"
 ZERO_MASKED_DETERIORATION = "Zero masked deterioration"
+ZERO_MASKED_IMPROVEMENT_DETERIORATION = "Zero masked improvement/deterioration"
 OTHER_FACTOR_CHANGING_NEUTRAL_MOVES = "Other factor-changing neutral moves"
+
+ZERO_MASKED_CATEGORIES: frozenset[FactorChangingNeutralCategory] = frozenset(
+    {"zero_masked_improvement", "zero_masked_deterioration"}
+)
+
+FACTOR_CHANGING_CHART_GROUPS: tuple[tuple[str, str, tuple[FactorChangingNeutralCategory, ...]], ...] = (
+    ("compensatory_neutral", COMPENSATORY_NEUTRAL_CHANGES, ("compensatory_neutral",)),
+    (
+        "zero_masked",
+        ZERO_MASKED_IMPROVEMENT_DETERIORATION,
+        ("zero_masked_improvement", "zero_masked_deterioration"),
+    ),
+    ("numerical_edge_case", OTHER_FACTOR_CHANGING_NEUTRAL_MOVES, ("numerical_edge_case",)),
+)
 
 FACTOR_CHANGING_CATEGORY_LABELS: dict[FactorChangingNeutralCategory, str] = {
     "compensatory_neutral": COMPENSATORY_NEUTRAL_CHANGES,
@@ -69,6 +84,11 @@ FACTOR_CHANGING_CATEGORY_MEANINGS: dict[FactorChangingNeutralCategory, str] = {
         "Factor scores change without a clear mixed compensation or unidirectional pattern"
     ),
 }
+
+ZERO_MASKED_CHART_MEANING = (
+    "Factor scores change in one direction while total fitness remains unchanged because "
+    "at least one factor score remains zero"
+)
 
 FACTOR_CHANGING_TABLE_HEADERS = [
     "Category",
@@ -215,16 +235,21 @@ def build_factor_changing_neutral_summary_rows(
         "avg_attractor_cycle_changes",
     ]
     rows: list[list[str | int | float]] = []
-    for category in FACTOR_CHANGING_CATEGORY_ORDER:
-        group = [event for event in events if event.category == category]
+    for group_key, label, categories in FACTOR_CHANGING_CHART_GROUPS:
+        group = [event for event in events if event.category in categories]
         count = len(group)
         if count == 0:
             continue
+        meaning = (
+            ZERO_MASKED_CHART_MEANING
+            if group_key == "zero_masked"
+            else FACTOR_CHANGING_CATEGORY_MEANINGS[categories[0]]
+        )
         rows.append(
             [
-                FACTOR_CHANGING_CATEGORY_LABELS[category],
+                label,
                 count,
-                FACTOR_CHANGING_CATEGORY_MEANINGS[category],
+                meaning,
                 100.0 * count / len(events) if events else 0.0,
                 100.0 * count / fitness_neutral_total if fitness_neutral_total else 0.0,
                 100.0 * count / total if total else 0.0,

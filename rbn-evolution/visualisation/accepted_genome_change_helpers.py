@@ -19,6 +19,24 @@ def _attractor_cycle_tuple(record: GenerationRecord, initial: State) -> tuple[st
     return tuple(record["details"][initial]["cycle"])
 
 
+def _canonical_cycle_tuple(cycle: tuple[str, ...]) -> tuple[str, ...]:
+    if not cycle:
+        return tuple()
+    if len(cycle) == 1:
+        return cycle
+    return min(tuple(cycle[offset:] + cycle[:offset]) for offset in range(len(cycle)))
+
+
+def _context_attractor_cycles_equal(
+    previous: GenerationRecord,
+    current: GenerationRecord,
+    initial: State,
+) -> bool:
+    return _canonical_cycle_tuple(_attractor_cycle_tuple(previous, initial)) == _canonical_cycle_tuple(
+        _attractor_cycle_tuple(current, initial)
+    )
+
+
 def _count_context_attractor_cycles_changed(
     previous: GenerationRecord,
     current: GenerationRecord,
@@ -26,6 +44,6 @@ def _count_context_attractor_cycles_changed(
 ) -> int:
     changed = 0
     for initial in context_order(contexts):
-        if _attractor_cycle_tuple(previous, initial) != _attractor_cycle_tuple(current, initial):
+        if not _context_attractor_cycles_equal(previous, current, initial):
             changed += 1
     return changed

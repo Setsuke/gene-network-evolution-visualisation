@@ -1,4 +1,4 @@
-"""Line plot of local (context) and total fitness over accepted generations."""
+"""Line plot of context-specific and total fitness over accepted steps."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from visualisation.factorised.metrics import (
 
 CONTEXT_COLORS = ("#059669", "#d97706", "#7c3aed", "#db2777", "#0891b2")
 TOTAL_COLOR = "#2563eb"
+DEFAULT_TITLE = "Context-Specific and Total Fitness Across Accepted Steps"
 
 
 def _require_matplotlib():
@@ -34,7 +35,7 @@ def plot_accepted_fitness_trajectory(
     """
     Plot local context fitness and total fitness on the same axes.
 
-    X axis: accepted generation (one point per accepted genome change).
+    X axis: accepted step (one point per accepted genome change).
     Y axis: fitness in [0, 1].
     """
     _require_matplotlib()
@@ -49,7 +50,7 @@ def plot_accepted_fitness_trajectory(
 
     figure, axis = plt.subplots(figsize=(10, 5))
 
-    for index, initial in enumerate(context_inits):
+    for index, _ in enumerate(context_inits):
         color = CONTEXT_COLORS[index % len(CONTEXT_COLORS)]
         values = [step.context_fitness[index] for step in metrics]
         axis.plot(
@@ -59,7 +60,7 @@ def plot_accepted_fitness_trajectory(
             marker="o",
             markersize=3,
             linewidth=1.5,
-            label=f"Context {index + 1} ({initial})",
+            label=f"Context {index + 1}",
         )
 
     axis.plot(
@@ -72,17 +73,11 @@ def plot_accepted_fitness_trajectory(
         label="Total fitness",
     )
 
-    axis.set_xlabel("Accepted generation")
+    axis.set_xlabel("Accepted step")
     axis.set_ylabel("Fitness")
     axis.set_ylim(0.0, 1.02)
     axis.set_xlim(accepted_steps[0], accepted_steps[-1])
-    axis.set_title(
-        title
-        or (
-            "Local and Total Fitness over Accepted Generations\n"
-            f"{len(metrics)} accepted steps"
-        )
-    )
+    axis.set_title(title or DEFAULT_TITLE)
     axis.grid(alpha=0.25)
     axis.legend(loc="lower right", fontsize=9)
 

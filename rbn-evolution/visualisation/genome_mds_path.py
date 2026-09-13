@@ -15,7 +15,7 @@ except ImportError:
 
 from rbn.types import Contexts, EvolutionHistory, Genome
 from visualisation.accepted_move_taxonomy import (
-    classify_top_level_accepted_move_category,
+    classify_export_change_type,
     iter_accepted_change_records,
 )
 from visualisation.factorised.metrics import extract_accepted_trajectory_metrics
@@ -48,10 +48,16 @@ def _change_types_for_history(
     *,
     step_count: int,
 ) -> tuple[str, ...]:
+    n_genes = len(history[0]["genome"])
     change_types: list[str] = ["initial"]
     for _, previous, current in iter_accepted_change_records(history):
         change_types.append(
-            classify_top_level_accepted_move_category(previous, current, contexts)
+            classify_export_change_type(
+                previous,
+                current,
+                contexts,
+                n_genes=n_genes,
+            )
         )
     if len(change_types) != step_count:
         raise ValueError(
@@ -361,26 +367,24 @@ def plot_genome_path_embedding(
     plt.close(figure)
 
 
-def plot_evolutionary_genome_mds_path(
+def export_evolutionary_genome_mds_path(
     histories: list[EvolutionHistory],
     contexts: Contexts,
-    save_path: str | Path,
+    save_path: str | Path | None = None,
     *,
     labels: list[str] | None = None,
     csv_path: str | Path | None = None,
     unity_json_paths: str | Path | list[str | Path] | None = None,
     highlight_best_run: bool = True,
     n_components: int = GENOME_EMBEDDING_DIMENSIONS,
-) -> Path:
+    shared_initial_genome: bool = False,
+    shared_initial_genome_value: Genome | None = None,
+) -> Path | None:
     """
-    Embed accepted genomes with classical MDS on Hamming distance and draw
-    each run's path from the initial genome to the final solution.
-
-    Computes ``n_components`` coordinates (default 3: x, y, z) for CSV / Unity
-    export; the PNG preview uses the first two dimensions only.
+    Embed accepted genomes with classical MDS on Hamming distance and export
+    trajectory data for CSV / Unity. When ``save_path`` is set, also write a
+    2D PNG preview (used for the shared-initial-genome Unity view).
     """
-    _require_matplotlib()
-
     if not histories:
         raise ValueError("histories must contain at least one evolution run")
     if n_components < 2:
@@ -401,8 +405,6 @@ def plot_evolutionary_genome_mds_path(
     coordinates = classical_mds(distance_matrix, n_components=n_components)
     path_embeddings = _build_path_embeddings(paths, genome_index)
 
-    save_path = Path(save_path)
-    save_path.parent.mkdir(parents=True, exist_ok=True)
     if csv_path is not None:
         _write_trajectory_csv(
             Path(csv_path),
@@ -426,9 +428,25 @@ def plot_evolutionary_genome_mds_path(
             gene_count=len(next(iter(contexts.values()))),
             context_count=len(contexts),
             contexts=contexts,
+            shared_initial_genome=shared_initial_genome,
+            initial_genome_index=(
+                genome_index[shared_initial_genome_value]
+                if shared_initial_genome and shared_initial_genome_value is not None
+                else None
+            ),
         )
-        export_unity_genome_embedding_json(payload, unity_json_paths)
+        export_unity_genome_embedding_json(
+            payload,
+            unity_json_paths,
+            unique_genomes=unique_genomes if shared_initial_genome else None,
+        )
 
+    if save_path is None:
+        return None
+
+    _require_matplotlib()
+    save_path = Path(save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
     plot_coordinates = coordinates[:, :2]
     total_steps = sum(embedding.path_length for embedding in path_embeddings)
     plot_genome_path_embedding(

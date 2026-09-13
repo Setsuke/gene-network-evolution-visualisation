@@ -297,8 +297,8 @@ def plot_neutral_move_summary_table(
         [
             str(row[0]),
             str(row[1]),
-            f"{float(row[2]):.1f}%",
-            f"{float(row[3]):.1f}%",
+            f"{float(row[2]):.2f}%",
+            f"{float(row[3]):.2f}%",
         ]
         for row in rows
     ]

@@ -1,4 +1,4 @@
-"""Export 3D genome path embeddings (MDS / UMAP) for Unity visualisation."""
+"""Export 3D genome path embeddings (MDS) for Unity visualisation."""
 
 from __future__ import annotations
 
@@ -9,6 +9,8 @@ from typing import Any
 import numpy as np
 
 from rbn.types import Contexts, Genome
+from visualisation.context_fitness_landscape import context_fitness_from_factor_scores
+from visualisation.evolutionary_landscape import hamming_distance
 
 SCHEMA_VERSION = 1
 
@@ -34,6 +36,11 @@ def build_unity_genome_embedding_payload(
     gene_count: int | None = None,
     context_count: int | None = None,
     contexts: Contexts | None = None,
+    shared_initial_genome: bool = False,
+    initial_genome_index: int | None = None,
+    solutions_only: bool = False,
+    embedded_genomes: list[Genome] | None = None,
+    reference_points: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     if coordinates.ndim != 2:
         raise ValueError("coordinates must be a 2D array")
@@ -47,12 +54,21 @@ def build_unity_genome_embedding_payload(
 
     unique_genomes: list[Genome] = []
     genome_index: dict[Genome, int] = {}
-    for _, genomes, _, _, _, _ in paths:
-        for genome in genomes:
-            if genome in genome_index:
-                continue
-            genome_index[genome] = len(unique_genomes)
-            unique_genomes.append(genome)
+    if embedded_genomes is not None:
+        unique_genomes = list(embedded_genomes)
+        genome_index = {genome: index for index, genome in enumerate(unique_genomes)}
+        if coordinates.shape[0] != len(unique_genomes):
+            raise ValueError(
+                "coordinates row count must match embedded_genomes length "
+                f"({coordinates.shape[0]} != {len(unique_genomes)})"
+            )
+    else:
+        for _, genomes, _, _, _, _ in paths:
+            for genome in genomes:
+                if genome in genome_index:
+                    continue
+                genome_index[genome] = len(unique_genomes)
+                unique_genomes.append(genome)
 
     run_entries: list[dict[str, Any]] = []
     for run_label, genomes, fitness_values, change_types, final_fitness, factor_scores in paths:
@@ -68,6 +84,15 @@ def build_unity_genome_embedding_payload(
         ):
             index = genome_index[genome]
             coord = coordinates[index]
+            hamming_from_previous = (
+                0 if step == 0 else hamming_distance(genomes[step - 1], genome)
+            )
+            hamming_from_initial = (
+                hamming_distance(unique_genomes[initial_genome_index], genome)
+                if shared_initial_genome and initial_genome_index is not None
+                else 0
+            )
+            context_1, context_2 = context_fitness_from_factor_scores(step_factor_scores)
             points.append(
                 {
                     "step": step,
@@ -79,6 +104,9 @@ def build_unity_genome_embedding_payload(
                     "z": float(coord[2]) if dimensions >= 3 else 0.0,
                     "changeType": change_type,
                     "factorScores": [float(score) for score in step_factor_scores],
+                    "contextFitness": [float(context_1), float(context_2)],
+                    "hammingFromPrevious": int(hamming_from_previous),
+                    "hammingFromInitial": int(hamming_from_initial),
                 }
             )
 
@@ -106,12 +134,21 @@ def build_unity_genome_embedding_payload(
         payload["contextCount"] = int(context_count)
     if contexts is not None:
         payload["contexts"] = serialize_contexts_for_unity(contexts)
+    payload["sharedInitialGenome"] = bool(shared_initial_genome)
+    if initial_genome_index is not None:
+        payload["initialGenomeIndex"] = int(initial_genome_index)
+    payload["solutionsOnly"] = bool(solutions_only)
+    if reference_points is not None:
+        payload["referencePoints"] = reference_points
+        payload["referencePointCount"] = len(reference_points)
     return payload
 
 
 def export_unity_genome_embedding_json(
     payload: dict[str, Any],
     output_paths: str | Path | list[str | Path],
+    *,
+    unique_genomes: list[Genome] | None = None,
 ) -> list[Path]:
     if isinstance(output_paths, (str, Path)):
         paths = [Path(output_paths)]
@@ -124,4 +161,8 @@ def export_unity_genome_embedding_json(
         with path.open("w", encoding="utf-8") as handle:
             json.dump(payload, handle, indent=2)
         written.append(path)
+        if unique_genomes is not None:
+            sidecar_path = path.with_name(f"{path.stem}_genomes.json")
+            with sidecar_path.open("w", encoding="utf-8") as handle:
+                json.dump({"genomes": list(unique_genomes)}, handle)
     return written

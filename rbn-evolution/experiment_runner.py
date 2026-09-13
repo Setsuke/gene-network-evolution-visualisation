@@ -7,7 +7,7 @@ from rbn.attractors import find_attractors, print_attractors
 from rbn.evolution import evolve_genome
 from rbn.transition_table import build_transition_table_from_genome
 from rbn.truth_table import generate_random_truth_table, print_truth_table, truth_table_to_genome
-from rbn.types import EvolutionHistory
+from rbn.types import EvolutionHistory, Genome
 from visualisation.accepted_fitness_plot import plot_accepted_fitness_trajectory
 from visualisation.factorised import (
     plot_factor_delta_heatmap,
@@ -26,8 +26,9 @@ def run_single_experiment(
     output_paths: RunOutputPaths | None,
     run_label: str | None = None,
     quiet: bool = False,
+    initial_genome: Genome | None = None,
 ) -> EvolutionHistory:
-    """Run one full pipeline from random truth table through export."""
+    """Run one full pipeline from random or fixed initial genome through export."""
     def log(message: str = "", *, force: bool = False) -> None:
         if not quiet or force:
             print(message)
@@ -43,12 +44,14 @@ def run_single_experiment(
         for initial, target in contexts.items():
             log(f"  {initial} -> {target}")
 
-    log("\n[1/5] Generating truth table...")
-    truth_table = generate_random_truth_table(n_genes)
-    if not quiet:
-        print_truth_table(truth_table)
-
-    initial_genome = truth_table_to_genome(truth_table)
+    log("\n[1/5] Preparing initial network...")
+    if initial_genome is None:
+        truth_table = generate_random_truth_table(n_genes)
+        if not quiet:
+            print_truth_table(truth_table)
+        initial_genome = truth_table_to_genome(truth_table)
+    elif not quiet:
+        log("  using shared initial genome from batch configuration")
 
     log("\n[2/5] Building transition table...")
     initial_transition_table, _, _ = build_transition_table_from_genome(

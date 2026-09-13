@@ -97,6 +97,40 @@ def is_fitness_improving(
     return float(current["fitness"]) > float(previous["fitness"])
 
 
+FACTOR_NEUTRAL_EXPORT_SUBCATEGORIES: frozenset[str] = frozenset(
+    {
+        "only_irrelevant_transitions_changed",
+        "path_transitions_changed_attractor_cycle_unchanged",
+        "attractor_cycle_changed_factor_scores_unchanged",
+    }
+)
+
+
+def classify_export_change_type(
+    previous: GenerationRecord,
+    current: GenerationRecord,
+    contexts: Contexts,
+    *,
+    n_genes: int,
+) -> str:
+    """Unity export slug: factor-neutral moves use neutral-move subcategories."""
+    top_level = classify_top_level_accepted_move_category(previous, current, contexts)
+    if top_level != "factor_neutral":
+        return top_level
+
+    from visualisation.neutral_moves import classify_factor_neutral_accepted_move
+
+    subcategory = classify_factor_neutral_accepted_move(
+        previous,
+        current,
+        contexts,
+        n_genes=n_genes,
+    )
+    if subcategory in FACTOR_NEUTRAL_EXPORT_SUBCATEGORIES:
+        return subcategory
+    return "factor_neutral"
+
+
 def classify_top_level_accepted_move_category(
     previous: GenerationRecord,
     current: GenerationRecord,

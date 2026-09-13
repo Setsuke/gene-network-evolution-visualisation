@@ -2,9 +2,12 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+import os
 import shutil
 
 from rbn.types import Contexts, State
+
+PROJECT_DIR = Path(__file__).resolve().parent
 
 DEFAULT_N_GENES = 5
 
@@ -13,14 +16,13 @@ DATA_OUTPUT_DIR = OUTPUT_DIR / "data"
 RUNS_OUTPUT_DIR = OUTPUT_DIR / "runs"
 RUN_DATA_SUBDIR = "data"
 
-EVOLUTIONARY_GENOME_MDS_PATH_PLOT = OUTPUT_DIR / "evolutionary_genome_mds_path.png"
 EVOLUTIONARY_GENOME_MDS_PATH_CSV = DATA_OUTPUT_DIR / "evolutionary_genome_mds_path.csv"
-EVOLUTIONARY_GENOME_UMAP_PATH_PLOT = OUTPUT_DIR / "evolutionary_genome_umap_path.png"
-EVOLUTIONARY_GENOME_UMAP_PATH_CSV = DATA_OUTPUT_DIR / "evolutionary_genome_umap_path.csv"
 GENOME_MDS_UNITY_JSON = DATA_OUTPUT_DIR / "unity_genome_mds_path.json"
-GENOME_UMAP_UNITY_JSON = DATA_OUTPUT_DIR / "unity_genome_umap_path.json"
-BATCH_FITNESS_LOAD_HEATMAP_PLOT = OUTPUT_DIR / "batch_fitness_load_heatmap.png"
-BATCH_FITNESS_LOAD_HEATMAP_CSV = DATA_OUTPUT_DIR / "batch_fitness_load_heatmap.csv"
+SHARED_INITIAL_GENOME_MDS_PLOT = OUTPUT_DIR / "shared_initial_genome_mds_path.png"
+SHARED_INITIAL_GENOME_MDS_CSV = DATA_OUTPUT_DIR / "shared_initial_genome_mds_path.csv"
+GENOME_SHARED_MDS_UNITY_JSON = DATA_OUTPUT_DIR / "unity_shared_genome_mds_path.json"
+BATCH_GENOME_MDS_PATH_CSV = DATA_OUTPUT_DIR / "batch_genome_mds_path.csv"
+GENOME_BATCH_MDS_UNITY_JSON = DATA_OUTPUT_DIR / "unity_batch_genome_mds_path.json"
 NEUTRAL_MOVE_SUMMARY_TABLE = OUTPUT_DIR / "neutral_move_summary_table.png"
 NEUTRAL_MOVE_SUMMARY_CSV = DATA_OUTPUT_DIR / "neutral_move_summary.csv"
 NEUTRAL_MOVE_BAR_CHART_PLOT = OUTPUT_DIR / "neutral_move_bar_chart.png"
@@ -28,8 +30,21 @@ NON_NEUTRAL_MOVE_SUMMARY_TABLE = OUTPUT_DIR / "non_neutral_move_summary_table.pn
 NON_NEUTRAL_MOVE_SUMMARY_CSV = DATA_OUTPUT_DIR / "non_neutral_move_summary.csv"
 FACTOR_CHANGING_NEUTRAL_SUMMARY_TABLE = OUTPUT_DIR / "factor_changing_neutral_moves_summary_table.png"
 FACTOR_CHANGING_NEUTRAL_SUMMARY_CSV = DATA_OUTPUT_DIR / "factor_changing_neutral_moves_summary.csv"
+PLATEAU_DRIFT_CLASSIFICATION_TABLE = OUTPUT_DIR / "plateau_drift_classification_table.png"
+PLATEAU_DRIFT_CLASSIFICATION_CSV = DATA_OUTPUT_DIR / "plateau_drift_classification.csv"
+PLATEAU_DRIFT_EXIT_TYPES_TABLE = OUTPUT_DIR / "plateau_drift_exit_types_table.png"
+PLATEAU_DRIFT_EXIT_TYPES_CSV = DATA_OUTPUT_DIR / "plateau_drift_exit_types.csv"
 ACCEPTED_MOVES_HIERARCHY_FLOW = (
     OUTPUT_DIR / "Classification of Accepted Evolutionary Moves.png"
+)
+ACCEPTED_MOVES_FACTOR_NEUTRAL_FLOW = (
+    OUTPUT_DIR / "accepted_moves_factor_neutral_flow.png"
+)
+ACCEPTED_MOVES_FACTOR_CHANGING_NEUTRAL_FLOW = (
+    OUTPUT_DIR / "accepted_moves_factor_changing_neutral_flow.png"
+)
+ACCEPTED_MOVES_FITNESS_IMPROVING_FLOW = (
+    OUTPUT_DIR / "accepted_moves_fitness_improving_flow.png"
 )
 ACCEPTED_MUTATION_CANDIDATES_BY_MOVE_TYPE_PLOT = (
     OUTPUT_DIR / "accepted_mutation_candidates_by_move_type.png"
@@ -38,30 +53,136 @@ ACCEPTED_MOVES_HIERARCHY_CSV = DATA_OUTPUT_DIR / "accepted_moves_hierarchy.csv"
 ACCEPTED_MOVES_HIERARCHY_TXT = DATA_OUTPUT_DIR / "accepted_moves_hierarchy_breakdown.txt"
 EVOLUTION_PROGRESS_BREAKDOWN_PLOT = OUTPUT_DIR / "evolution_progress_breakdown.png"
 EVOLUTION_PROGRESS_BREAKDOWN_CSV = DATA_OUTPUT_DIR / "evolution_progress_breakdown.csv"
+ACCEPTED_GENOMES_PROGRESS_QUARTILES_PLOT = (
+    OUTPUT_DIR / "accepted_genomes_by_progress_quartiles.png"
+)
+ACCEPTED_GENOMES_PROGRESS_QUARTILES_CSV = (
+    DATA_OUTPUT_DIR / "accepted_genomes_by_progress_quartiles.csv"
+)
+SHARED_ACCEPTED_GENOMES_PROGRESS_QUARTILES_PLOT = (
+    OUTPUT_DIR / "shared_accepted_genomes_by_progress_quartiles.png"
+)
+SHARED_ACCEPTED_GENOMES_PROGRESS_QUARTILES_CSV = (
+    DATA_OUTPUT_DIR / "shared_accepted_genomes_by_progress_quartiles.csv"
+)
+PROGRESS_ATTRACTOR_COUNTS_PLOT = OUTPUT_DIR / "progress_attractor_counts.png"
+PROGRESS_ATTRACTOR_COUNTS_CSV = DATA_OUTPUT_DIR / "progress_attractor_counts.csv"
+DRIFTING_CATEGORIES_NORMALISED_PROGRESS_PLOT = (
+    OUTPUT_DIR / "drifting_categories_normalised_progress.png"
+)
+DRIFTING_CATEGORIES_NORMALISED_PROGRESS_CSV = (
+    DATA_OUTPUT_DIR / "drifting_categories_normalised_progress.csv"
+)
+DRIFTING_CATEGORIES_WITH_IMPROVEMENT_NORMALISED_PROGRESS_PLOT = (
+    OUTPUT_DIR / "drifting_categories_with_improvement_normalised_progress.png"
+)
+DRIFTING_CATEGORIES_WITH_IMPROVEMENT_NORMALISED_PROGRESS_CSV = (
+    DATA_OUTPUT_DIR / "drifting_categories_with_improvement_normalised_progress.csv"
+)
+DRIFT_EPISODE_LENGTH_HISTOGRAM_PLOT = OUTPUT_DIR / "drift_episode_length_histogram.png"
+DRIFT_EPISODE_GENOTYPE_EXPLORATION_EPISODES_CSV = (
+    DATA_OUTPUT_DIR / "drift_episode_genotype_exploration_episodes.csv"
+)
+DRIFT_EPISODE_GENOTYPE_EXPLORATION_QUARTILES_CSV = (
+    DATA_OUTPUT_DIR / "drift_episode_genotype_exploration_quartiles.csv"
+)
+DRIFT_EPISODE_GENOTYPE_EXPLORATION_LENGTH_QUARTILE_MAX_HAMMING_PLOT = (
+    OUTPUT_DIR / "drift_exploration_length_quartile_max_hamming.png"
+)
+DRIFT_EPISODE_GENOTYPE_EXPLORATION_LENGTH_MEDIAN_START_END_HAMMING_PLOT = (
+    OUTPUT_DIR / "drift_episode_length_median_start_end_hamming.png"
+)
 ACCEPTED_MOVE_TRANSITIONS_CSV = DATA_OUTPUT_DIR / "accepted_move_transitions.csv"
 ACCEPTED_MOVE_TRANSITION_COUNTS_CSV = DATA_OUTPUT_DIR / "accepted_move_transition_counts.csv"
 ACCEPTED_MOVE_TRANSITION_MATRIX_CSV = DATA_OUTPUT_DIR / "accepted_move_transition_matrix.csv"
-ACCEPTED_MOVE_TRANSITION_HEATMAP = OUTPUT_DIR / "accepted_move_transition_heatmap.png"
 PRE_SOLUTION_FITNESS_DISTRIBUTION_PLOT = OUTPUT_DIR / "pre_solution_fitness_distribution.png"
 PRE_SOLUTION_FITNESS_DISTRIBUTION_CSV = DATA_OUTPUT_DIR / "pre_solution_fitness_distribution.csv"
+MOST_DRIFTING_FITNESS_TABLE_PLOT = OUTPUT_DIR / "most_drifting_fitness_table.png"
+MOST_DRIFTING_FITNESS_TABLE_CSV = DATA_OUTPUT_DIR / "most_drifting_fitness_table.csv"
 
-UNITY_STREAMING_ASSETS_DIR = Path(
-    r"C:\2026\DissertationProject\unity\rbn-visualisation\Assets\StreamingAssets"
-)
-UNITY_TRAJECTORIES_JSON = UNITY_STREAMING_ASSETS_DIR / "unity_trajectories.json"
-UNITY_GENOME_MDS_JSON = UNITY_STREAMING_ASSETS_DIR / "unity_genome_mds_path.json"
-UNITY_GENOME_UMAP_JSON = UNITY_STREAMING_ASSETS_DIR / "unity_genome_umap_path.json"
 BOOLEAN_STATE_MDS_LAYOUT_JSON = OUTPUT_DIR / "boolean_state_mds_layout.json"
 BOOLEAN_STATE_MDS_LAYOUT_CSV = DATA_OUTPUT_DIR / "boolean_state_mds_layout.csv"
-UNITY_BOOLEAN_STATE_MDS_LAYOUT_JSON = (
-    UNITY_STREAMING_ASSETS_DIR / "boolean_state_mds_layout.json"
-)
 UNITY_BOOLEAN_ATTRACTOR_LANDSCAPE_JSON = (
     OUTPUT_DIR / "unity_boolean_attractor_landscape.json"
 )
-UNITY_STREAMING_BOOLEAN_ATTRACTOR_LANDSCAPE_JSON = (
-    UNITY_STREAMING_ASSETS_DIR / "unity_boolean_attractor_landscape.json"
-)
+
+
+def _unity_streaming_assets_candidates() -> tuple[Path, ...]:
+    """Known layouts relative to this package (rbn-evolution/)."""
+    dissertation_root = PROJECT_DIR.parent.parent.parent
+    return (
+        dissertation_root / "unity" / "rbn-visualisation" / "Assets" / "StreamingAssets",
+        PROJECT_DIR.parent.parent / "unity" / "rbn-visualisation" / "Assets" / "StreamingAssets",
+        PROJECT_DIR / "unity" / "rbn-visualisation" / "Assets" / "StreamingAssets",
+    )
+
+
+def resolve_unity_streaming_assets_dir(
+    explicit: Path | str | None = None,
+) -> Path:
+    """
+    Resolve Unity StreamingAssets for JSON export.
+
+    Priority:
+    1. explicit path (CLI --unity-streaming-assets)
+    2. env UNITY_STREAMING_ASSETS or RBN_UNITY_STREAMING_ASSETS
+    3. first existing directory among known relative layouts
+    4. default candidate path (may not exist yet)
+    """
+    if explicit is not None and str(explicit).strip():
+        return Path(explicit).expanduser().resolve()
+
+    for env_name in ("UNITY_STREAMING_ASSETS", "RBN_UNITY_STREAMING_ASSETS"):
+        env_value = os.environ.get(env_name, "").strip()
+        if env_value:
+            return Path(env_value).expanduser().resolve()
+
+    for candidate in _unity_streaming_assets_candidates():
+        if candidate.is_dir():
+            return candidate.resolve()
+
+    return _unity_streaming_assets_candidates()[0].resolve()
+
+
+def _assign_unity_streaming_assets_paths(streaming_assets_dir: Path) -> None:
+    global UNITY_STREAMING_ASSETS_DIR
+    global UNITY_GENOME_MDS_JSON
+    global UNITY_SHARED_GENOME_MDS_JSON
+    global UNITY_BATCH_GENOME_MDS_JSON
+    global UNITY_BOOLEAN_STATE_MDS_LAYOUT_JSON
+    global UNITY_STREAMING_BOOLEAN_ATTRACTOR_LANDSCAPE_JSON
+
+    UNITY_STREAMING_ASSETS_DIR = streaming_assets_dir
+    UNITY_GENOME_MDS_JSON = streaming_assets_dir / "unity_genome_mds_path.json"
+    UNITY_SHARED_GENOME_MDS_JSON = (
+        streaming_assets_dir / "unity_shared_genome_mds_path.json"
+    )
+    UNITY_BATCH_GENOME_MDS_JSON = (
+        streaming_assets_dir / "unity_batch_genome_mds_path.json"
+    )
+    UNITY_BOOLEAN_STATE_MDS_LAYOUT_JSON = (
+        streaming_assets_dir / "boolean_state_mds_layout.json"
+    )
+    UNITY_STREAMING_BOOLEAN_ATTRACTOR_LANDSCAPE_JSON = (
+        streaming_assets_dir / "unity_boolean_attractor_landscape.json"
+    )
+
+
+def configure_unity_streaming_assets(
+    explicit: Path | str | None = None,
+) -> Path:
+    """Set Unity export paths; call before run_demo when using CLI override."""
+    resolved = resolve_unity_streaming_assets_dir(explicit)
+    _assign_unity_streaming_assets_paths(resolved)
+    return resolved
+
+
+_assign_unity_streaming_assets_paths(resolve_unity_streaming_assets_dir())
+
+# Unity shared-initial-genome MDS: cap runs to keep embedding tractable.
+UNITY_SHARED_EMBEDDING_MAX_RUNS = 200
+# Unity Option 9 (distinct initial genomes, full paths): same cap for MDS tractability.
+UNITY_BATCH_MDS_PATH_MAX_RUNS = 200
 
 
 @dataclass(frozen=True)

@@ -30,7 +30,7 @@ from rbn.types import Contexts, EvolutionHistory, GenerationRecord, State, Trans
 
 from visualisation.accepted_move_taxonomy import (
 
-    classify_top_level_accepted_move_category,
+    classify_export_change_type,
 
     iter_accepted_change_records,
 
@@ -96,13 +96,25 @@ def _change_types_for_history(
 
 ) -> tuple[str, ...]:
 
+    n_genes = len(history[0]["genome"])
+
     change_types: list[str] = ["initial"]
 
     for _, previous, current in iter_accepted_change_records(history):
 
         change_types.append(
 
-            classify_top_level_accepted_move_category(previous, current, contexts)
+            classify_export_change_type(
+
+                previous,
+
+                current,
+
+                contexts,
+
+                n_genes=n_genes,
+
+            )
 
         )
 

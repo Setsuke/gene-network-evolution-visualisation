@@ -17,11 +17,9 @@ except ImportError:
 from rbn.types import Contexts, EvolutionHistory
 from visualisation.accepted_move_taxonomy import count_accepted_genome_changes
 from visualisation.factor_changing_neutral_moves import (
-    FACTOR_CHANGING_CATEGORY_LABELS,
-    FACTOR_CHANGING_CATEGORY_ORDER,
+    FACTOR_CHANGING_CHART_GROUPS,
     OTHER_FACTOR_CHANGING_NEUTRAL_MOVES,
-    ZERO_MASKED_DETERIORATION,
-    ZERO_MASKED_IMPROVEMENT,
+    ZERO_MASKED_IMPROVEMENT_DETERIORATION,
     collect_factor_changing_neutral_events,
 )
 from visualisation.neutral_moves import (
@@ -45,10 +43,7 @@ FACTOR_NEUTRAL_BREAKDOWN_LABELS = {
     "attractor_cycle_changed_factor_scores_unchanged": "Cycle changed, factor scores unchanged",
 }
 
-FACTOR_CHANGING_BREAKDOWN_LABELS = {
-    category: FACTOR_CHANGING_CATEGORY_LABELS[category]
-    for category in FACTOR_CHANGING_CATEGORY_ORDER
-}
+LEAF_MIN_BAND_HEIGHT = 0.036
 
 GROUP_COLORS = {
     FACTOR_NEUTRAL_ACCEPTED_MOVES: "#0284c7",
@@ -62,8 +57,7 @@ CHILD_COLORS = {
     "Cycle changed, factor scores unchanged": "#a855f7",
     "No transition changed": "#cbd5e1",
     "Compensatory neutral changes": "#fb923c",
-    ZERO_MASKED_IMPROVEMENT: "#fdba74",
-    ZERO_MASKED_DETERIORATION: "#78716c",
+    ZERO_MASKED_IMPROVEMENT_DETERIORATION: "#fdba74",
     OTHER_FACTOR_CHANGING_NEUTRAL_MOVES: "#94a3b8",
     "Compensatory improvement": "#4ade80",
     "Direct improvement": "#facc15",
@@ -72,8 +66,6 @@ CHILD_COLORS = {
 ROOT_COLOR = "#334155"
 
 FLOW_CALLOUT_SHORT_LABELS = {
-    ZERO_MASKED_IMPROVEMENT: "Zero masked improvement",
-    ZERO_MASKED_DETERIORATION: "Zero masked deterioration",
     OTHER_FACTOR_CHANGING_NEUTRAL_MOVES: "Other FC neutral moves",
 }
 
@@ -142,13 +134,13 @@ def build_accepted_moves_breakdown(
         )
 
     factor_changing_children: list[BreakdownEntry] = []
-    for category in FACTOR_CHANGING_CATEGORY_ORDER:
-        count = sum(1 for event in factor_changing if event.category == category)
+    for _group_key, label, categories in FACTOR_CHANGING_CHART_GROUPS:
+        count = sum(1 for event in factor_changing if event.category in categories)
         if count == 0:
             continue
         factor_changing_children.append(
             BreakdownEntry(
-                FACTOR_CHANGING_BREAKDOWN_LABELS[category],
+                label,
                 count,
                 _pct(count, total),
             )
@@ -282,6 +274,119 @@ def _layout_bands(
     return bands
 
 
+def _layout_bands_with_minimum_height(
+    items: list[tuple[str, int, float, str]],
+    *,
+    y_min: float,
+    y_max: float,
+    min_band_height: float = LEAF_MIN_BAND_HEIGHT,
+) -> list[_FlowBand]:
+    """Layout bands with a visual floor so each leaf fits one callout line."""
+    if not items:
+        return []
+
+    span = y_max - y_min
+    item_count = len(items)
+    total = sum(count for _, count, _, _ in items)
+
+    if min_band_height * item_count >= span:
+        heights = [span / item_count] * item_count
+    else:
+        extra_span = span - min_band_height * item_count
+        heights = [
+            min_band_height
+            + (extra_span * count / total if total else extra_span / item_count)
+            for _, count, _, _ in items
+        ]
+
+    y_cursor = y_max
+    bands: list[_FlowBand] = []
+    for (label, count, pct, color), height in zip(items, heights):
+        bands.append(
+            _FlowBand(
+                label=label,
+                count=count,
+                pct=pct,
+                color=color,
+                y_bottom=y_cursor - height,
+                y_top=y_cursor,
+            )
+        )
+        y_cursor -= height
+    return bands
+
+
+def _layout_group_bands_with_leaf_minimums(
+    groups: tuple[BreakdownGroup, ...],
+    *,
+    y_min: float,
+    y_max: float,
+    min_leaf_height: float = LEAF_MIN_BAND_HEIGHT,
+) -> list[_FlowBand]:
+    """Size move-type bands so each group's subcategories can use a readable min height."""
+    active_groups = [group for group in groups if group.count > 0]
+    if not active_groups:
+        return []
+
+    span = y_max - y_min
+    total_count = sum(group.count for group in active_groups)
+    min_spans = [
+        min_leaf_height * sum(1 for child in group.children if child.count > 0)
+        for group in active_groups
+    ]
+    total_min = sum(min_spans)
+
+    if total_min >= span:
+        heights = [
+            span * group.count / total_count if total_count else span / len(active_groups)
+            for group in active_groups
+        ]
+    else:
+        extra = span - total_min
+        heights = [
+            min_span
+            + (extra * group.count / total_count if total_count else extra / len(active_groups))
+            for min_span, group in zip(min_spans, active_groups)
+        ]
+
+    y_cursor = y_max
+    bands: list[_FlowBand] = []
+    for group, height in zip(active_groups, heights):
+        bands.append(
+            _FlowBand(
+                label=group.label,
+                count=group.count,
+                pct=group.pct_of_all_accepted,
+                color=GROUP_COLORS[group.label],
+                y_bottom=y_cursor - height,
+                y_top=y_cursor,
+            )
+        )
+        y_cursor -= height
+    return bands
+
+
+def _draw_aligned_flow_ribbons(
+    axis,
+    x0: float,
+    x1: float,
+    leaf_bands: list[_FlowBand],
+    *,
+    node_width: float,
+) -> None:
+    for child_band in leaf_bands:
+        _draw_flow_ribbon(
+            axis,
+            x0 + node_width / 2.0,
+            child_band.y_bottom,
+            child_band.y_top,
+            x1 - node_width / 2.0,
+            child_band.y_bottom,
+            child_band.y_top,
+            child_band.color,
+        )
+
+
 def _draw_flow_ribbon(
     axis,
     x0: float,
@@ -378,55 +483,6 @@ def _draw_flow_node(
         )
 
 
-def _resolve_label_positions_band_aligned(
-    bands: list[_FlowBand],
-    heights: list[float],
-    *,
-    y_min: float,
-    y_max: float,
-    edge_padding: float = 0.012,
-) -> list[float]:
-    """Keep labels near their bands; nudge only enough to avoid overlap."""
-    if not bands:
-        return []
-
-    count = len(bands)
-    positions = [band.y_center for band in bands]
-    order = sorted(range(count), key=lambda index: bands[index].y_center, reverse=True)
-
-    for _ in range(count * 2):
-        changed = False
-        for rank in range(1, count):
-            upper = order[rank - 1]
-            lower = order[rank]
-            limit = positions[upper] - (
-                heights[upper] / 2.0 + edge_padding + heights[lower] / 2.0
-            )
-            if positions[lower] > limit:
-                positions[lower] = limit
-                changed = True
-        for rank in range(count - 2, -1, -1):
-            upper = order[rank]
-            lower = order[rank + 1]
-            limit = positions[lower] + (
-                heights[lower] / 2.0 + edge_padding + heights[upper] / 2.0
-            )
-            if positions[upper] < limit:
-                positions[upper] = limit
-                changed = True
-        if not changed:
-            break
-
-    for index in range(count):
-        if bands[index].label == DIRECT_IMPROVEMENT_LABEL:
-            positions[index] = bands[index].y_center
-            continue
-        half = heights[index] / 2.0
-        positions[index] = max(y_min + half, min(y_max - half, positions[index]))
-
-    return positions
-
-
 def _draw_callout_connector(
     axis,
     band: _FlowBand,
@@ -466,39 +522,6 @@ def _draw_callout_connector(
         linewidth=0.9,
         zorder=4,
     )
-
-
-def _measure_callout_heights_axes(
-    figure,
-    axis,
-    bands: list[_FlowBand],
-    *,
-    label_x: float,
-) -> list[float]:
-    texts = []
-    for band in bands:
-        text = axis.text(
-            label_x,
-            0.5,
-            _callout_label_text(band),
-            ha="left",
-            va="center",
-            fontsize=8.5,
-            color="#0f172a",
-            linespacing=1.15,
-            alpha=0.0,
-        )
-        texts.append(text)
-    figure.canvas.draw()
-    renderer = figure.canvas.get_renderer()
-    inverse = axis.transData.inverted()
-    heights = []
-    for text in texts:
-        bbox = text.get_window_extent(renderer=renderer)
-        bbox_data = inverse.transform_bbox(bbox)
-        heights.append(max(bbox_data.height, 0.032))
-        text.remove()
-    return heights
 
 
 def _draw_flow_leaf_callouts(
@@ -573,7 +596,15 @@ def _plot_accepted_moves_flow_diagram(
         for group in breakdown.groups
         if group.count > 0
     ]
-    group_bands = _layout_bands(group_items, y_min=y_min, y_max=y_max)
+    active_groups = [group for group in breakdown.groups if group.count > 0]
+    if include_subcategories:
+        group_bands = _layout_group_bands_with_leaf_minimums(
+            breakdown.groups,
+            y_min=y_min,
+            y_max=y_max,
+        )
+    else:
+        group_bands = _layout_bands(group_items, y_min=y_min, y_max=y_max)
 
     if include_subcategories:
         x_root, x_group, x_leaf = 0.11, 0.46, 0.82
@@ -594,10 +625,8 @@ def _plot_accepted_moves_flow_diagram(
 
     if include_subcategories:
         leaf_bands: list[_FlowBand] = []
-        for group, group_band in zip(
-            [group for group in breakdown.groups if group.count > 0],
-            group_bands,
-        ):
+
+        for group, group_band in zip(active_groups, group_bands):
             child_items = [
                 (
                     child.label,
@@ -608,33 +637,19 @@ def _plot_accepted_moves_flow_diagram(
                 for child in group.children
                 if child.count > 0
             ]
-            leaf_bands.extend(
-                _layout_bands(
-                    child_items,
-                    y_min=group_band.y_bottom,
-                    y_max=group_band.y_top,
-                )
+            group_leaf_bands = _layout_bands_with_minimum_height(
+                child_items,
+                y_min=group_band.y_bottom,
+                y_max=group_band.y_top,
             )
-
-        leaf_index = 0
-        for group, group_band in zip(
-            [group for group in breakdown.groups if group.count > 0],
-            group_bands,
-        ):
-            group_leaf_count = sum(1 for child in group.children if child.count > 0)
-            group_leaf_bands = leaf_bands[leaf_index : leaf_index + group_leaf_count]
-            leaf_index += group_leaf_count
-            for child_band in group_leaf_bands:
-                _draw_flow_ribbon(
-                    axis,
-                    x_group + node_width / 2.0,
-                    child_band.y_bottom,
-                    child_band.y_top,
-                    x_leaf - node_width / 2.0,
-                    child_band.y_bottom,
-                    child_band.y_top,
-                    child_band.color,
-                )
+            leaf_bands.extend(group_leaf_bands)
+            _draw_aligned_flow_ribbons(
+                axis,
+                x_group,
+                x_leaf,
+                group_leaf_bands,
+                node_width=node_width,
+            )
 
     axis.text(x_root, 0.985, "All accepted", ha="center", va="top", fontsize=10, color="#475569")
     axis.text(x_group, 0.985, "Move type", ha="center", va="top", fontsize=10, color="#475569")
@@ -656,20 +671,7 @@ def _plot_accepted_moves_flow_diagram(
 
     if include_subcategories:
         label_x = x_leaf + node_width / 2.0 + 0.045
-        label_y_min = y_min + 0.02
-        label_y_max = y_max - 0.02
-        callout_heights = _measure_callout_heights_axes(
-            figure,
-            axis,
-            leaf_bands,
-            label_x=label_x,
-        )
-        leaf_label_positions = _resolve_label_positions_band_aligned(
-            leaf_bands,
-            callout_heights,
-            y_min=label_y_min,
-            y_max=label_y_max,
-        )
+        leaf_label_positions = [band.y_center for band in leaf_bands]
         _draw_flow_leaf_callouts(
             axis,
             x_leaf,
@@ -681,6 +683,130 @@ def _plot_accepted_moves_flow_diagram(
     _draw_flow_node(axis, x_root, root_band, node_width=node_width, label_side="left")
     for group_band in group_bands:
         _draw_flow_node(axis, x_group, group_band, node_width=node_width, label_side="left")
+
+
+def _plot_single_group_flow_diagram(
+    figure,
+    axis,
+    group: BreakdownGroup,
+    *,
+    group_color: str,
+) -> None:
+    y_min, y_max = 0.06, 0.94
+    node_width = 0.034
+    x_root, x_leaf = 0.18, 0.78
+
+    root_band = _FlowBand(
+        label=group.label,
+        count=group.count,
+        pct=group.pct_of_all_accepted,
+        color=group_color,
+        y_bottom=y_min,
+        y_top=y_max,
+    )
+
+    child_items = [
+        (
+            child.label,
+            child.count,
+            child.pct_of_all_accepted,
+            CHILD_COLORS.get(child.label, group_color),
+        )
+        for child in group.children
+        if child.count > 0
+    ]
+    leaf_bands = _layout_bands_with_minimum_height(child_items, y_min=y_min, y_max=y_max)
+
+    _draw_aligned_flow_ribbons(
+        axis,
+        x_root,
+        x_leaf,
+        leaf_bands,
+        node_width=node_width,
+    )
+
+    axis.text(x_root, 0.985, "Move type", ha="center", va="top", fontsize=10, color="#475569")
+    axis.text(
+        x_leaf + 0.08,
+        0.985,
+        "Subcategory",
+        ha="center",
+        va="top",
+        fontsize=10,
+        color="#475569",
+    )
+    axis.set_xlim(0.0, 1.14)
+    axis.set_ylim(0.0, 1.0)
+    axis.axis("off")
+
+    label_x = x_leaf + node_width / 2.0 + 0.045
+    leaf_label_positions = [band.y_center for band in leaf_bands]
+    _draw_flow_leaf_callouts(
+        axis,
+        x_leaf,
+        leaf_bands,
+        leaf_label_positions,
+        node_width=node_width,
+    )
+    _draw_flow_node(axis, x_root, root_band, node_width=node_width, label_side="left")
+
+
+def plot_accepted_moves_category_flow_diagrams(
+    histories: list[EvolutionHistory],
+    contexts: Contexts,
+    n_genes: int,
+    *,
+    factor_neutral_plot: str | Path,
+    factor_changing_neutral_plot: str | Path,
+    fitness_improving_plot: str | Path,
+    labels: list[str] | None = None,
+) -> tuple[Path, Path, Path]:
+    if plt is None or FancyBboxPatch is None or Polygon is None:
+        raise ImportError("matplotlib is required for hierarchy flow diagrams")
+
+    breakdown = build_accepted_moves_breakdown(
+        histories, contexts, n_genes=n_genes, labels=labels
+    )
+    plot_specs = (
+        (FACTOR_NEUTRAL_ACCEPTED_MOVES, factor_neutral_plot, GROUP_COLORS[FACTOR_NEUTRAL_ACCEPTED_MOVES]),
+        (
+            FACTOR_CHANGING_NEUTRAL_ACCEPTED_MOVES,
+            factor_changing_neutral_plot,
+            GROUP_COLORS[FACTOR_CHANGING_NEUTRAL_ACCEPTED_MOVES],
+        ),
+        (
+            FITNESS_IMPROVING_ACCEPTED_MOVES,
+            fitness_improving_plot,
+            GROUP_COLORS[FITNESS_IMPROVING_ACCEPTED_MOVES],
+        ),
+    )
+    saved_paths: list[Path] = []
+    groups_by_label = {group.label: group for group in breakdown.groups}
+
+    for group_label, save_path, group_color in plot_specs:
+        group = groups_by_label[group_label]
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        figure, axis = plt.subplots(figsize=(12.5, 8.5))
+        _plot_single_group_flow_diagram(
+            figure,
+            axis,
+            group,
+            group_color=group_color,
+        )
+        figure.suptitle(
+            f"{group.label}\n"
+            f"{len(histories)} runs  |  {group.count} moves ({group.pct_of_all_accepted:.1f}% of all accepted)",
+            fontsize=13,
+            y=0.98,
+        )
+        figure.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.03)
+        figure.savefig(save_path, bbox_inches="tight", dpi=200, pad_inches=0.2)
+        plt.close(figure)
+        saved_paths.append(save_path)
+
+    return tuple(saved_paths)  # type: ignore[return-value]
 
 
 def plot_accepted_moves_hierarchy_flow(
