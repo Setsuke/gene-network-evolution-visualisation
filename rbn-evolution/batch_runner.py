@@ -10,7 +10,8 @@ from typing import Callable
 
 from config import get_run_output_paths
 from experiment_runner import run_single_experiment
-from rbn.types import Contexts, EvolutionHistory
+from rbn.truth_table import generate_random_truth_table, truth_table_to_genome
+from rbn.types import Contexts, EvolutionHistory, Genome
 
 # Headroom for Windows, Unity, VS Code, Chrome, and other desktop apps.
 RESERVED_RAM_GB = 28.0
@@ -29,6 +30,7 @@ class RunTask:
     mutation_probability: float
     generations: int
     show_plots: bool
+    initial_genome: Genome | None = None
 
 
 @dataclass(frozen=True)
@@ -179,6 +181,7 @@ def _run_task(task: RunTask) -> RunTaskResult:
         output_paths=output_paths,
         run_label=run_label if task.runs > 1 else None,
         quiet=True,
+        initial_genome=task.initial_genome,
     )
     return RunTaskResult(run_index=task.run_index, history=history, run_label=run_label)
 
@@ -192,9 +195,19 @@ def run_batch_experiments(
     generations: int,
     show_plots: bool,
     jobs: int | None,
+    shared_initial_genome: bool = False,
     progress_callback: Callable[[RunTaskResult], None] | None = None,
 ) -> tuple[list[EvolutionHistory], list[str], JobPlan]:
     plan = resolve_job_count(runs=runs, jobs=jobs)
+
+    batch_initial_genome: Genome | None = None
+    if shared_initial_genome:
+        batch_initial_genome = truth_table_to_genome(generate_random_truth_table(n_genes))
+        print(
+            f"Shared initial genome enabled: all {runs} run(s) start from the same "
+            f"random {len(batch_initial_genome)}-bit network."
+        )
+
     tasks = [
         RunTask(
             run_index=run_index,
@@ -204,6 +217,7 @@ def run_batch_experiments(
             mutation_probability=mutation_probability,
             generations=generations,
             show_plots=show_plots,
+            initial_genome=batch_initial_genome,
         )
         for run_index in range(1, runs + 1)
     ]
@@ -222,6 +236,7 @@ def run_batch_experiments(
                 output_paths=output_paths,
                 run_label=run_label,
                 quiet=False,
+                initial_genome=task.initial_genome,
             )
             result = RunTaskResult(
                 run_index=task.run_index,

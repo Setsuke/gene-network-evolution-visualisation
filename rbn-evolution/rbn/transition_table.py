@@ -58,9 +58,3 @@ def build_transition_table_from_genome(
     truth_dict = truth_table_to_dict(truth_table)
     transition_table = build_transition_table_from_truth_table(truth_table)
     return transition_table, truth_table, truth_dict
-
-
-def print_transition_table(transition_table: TransitionTable) -> None:
-    print("\nTRANSITION TABLE:")
-    for state in sorted(transition_table.keys()):
-        print(f"{state} -> {transition_table[state]}")

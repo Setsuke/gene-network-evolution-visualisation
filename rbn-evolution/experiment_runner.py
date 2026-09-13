@@ -7,8 +7,12 @@ from rbn.attractors import find_attractors, print_attractors
 from rbn.evolution import evolve_genome
 from rbn.transition_table import build_transition_table_from_genome
 from rbn.truth_table import generate_random_truth_table, print_truth_table, truth_table_to_genome
-from rbn.types import EvolutionHistory
-from visualisation.factorised import plot_factorised_fitness_trajectory
+from rbn.types import EvolutionHistory, Genome
+from visualisation.accepted_fitness_plot import plot_accepted_fitness_trajectory
+from visualisation.factorised import (
+    plot_factor_delta_heatmap,
+    plot_factorised_fitness_trajectory,
+)
 from visualisation.plots_2d import plot_attractor_landscape, plot_fitness_history
 
 
@@ -22,8 +26,9 @@ def run_single_experiment(
     output_paths: RunOutputPaths | None,
     run_label: str | None = None,
     quiet: bool = False,
+    initial_genome: Genome | None = None,
 ) -> EvolutionHistory:
-    """Run one full pipeline from random truth table through export."""
+    """Run one full pipeline from random or fixed initial genome through export."""
     def log(message: str = "", *, force: bool = False) -> None:
         if not quiet or force:
             print(message)
@@ -39,12 +44,14 @@ def run_single_experiment(
         for initial, target in contexts.items():
             log(f"  {initial} -> {target}")
 
-    log("\n[1/5] Generating truth table...")
-    truth_table = generate_random_truth_table(n_genes)
-    if not quiet:
-        print_truth_table(truth_table)
-
-    initial_genome = truth_table_to_genome(truth_table)
+    log("\n[1/5] Preparing initial network...")
+    if initial_genome is None:
+        truth_table = generate_random_truth_table(n_genes)
+        if not quiet:
+            print_truth_table(truth_table)
+        initial_genome = truth_table_to_genome(truth_table)
+    elif not quiet:
+        log("  using shared initial genome from batch configuration")
 
     log("\n[2/5] Building transition table...")
     initial_transition_table, _, _ = build_transition_table_from_genome(
@@ -83,6 +90,11 @@ def run_single_experiment(
         f"Final Attractor Landscape (n={n_genes})",
         None if show_plots or output_paths is None else output_paths.final_landscape_plot,
     )
+    plot_accepted_fitness_trajectory(
+        history,
+        contexts,
+        None if show_plots or output_paths is None else output_paths.accepted_fitness_plot,
+    )
     if output_paths is not None and not show_plots:
         plot_factorised_fitness_trajectory(
             history,
@@ -90,6 +102,12 @@ def run_single_experiment(
             n_genes,
             output_paths.factorised_trajectory_plot,
             csv_path=output_paths.factorised_trajectory_csv,
+        )
+        plot_factor_delta_heatmap(
+            history,
+            contexts,
+            n_genes,
+            output_paths.factor_delta_plot,
         )
 
     if output_paths is not None:
@@ -121,7 +139,9 @@ def run_single_experiment(
         log(f"Evolution JSON: {output_paths.evolution_json}")
         log(f"Context fitness CSV: {output_paths.context_fitness_csv}")
         log(f"Context fitness table: {output_paths.context_fitness_txt}")
+        log(f"Accepted fitness plot: {output_paths.accepted_fitness_plot}")
         log(f"Factorised trajectory plot: {output_paths.factorised_trajectory_plot}")
         log(f"Factorised trajectory CSV: {output_paths.factorised_trajectory_csv}")
+        log(f"Factor delta heatmap: {output_paths.factor_delta_plot}")
 
     return history

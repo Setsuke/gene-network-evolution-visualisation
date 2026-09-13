@@ -1,48 +1,39 @@
-# `evolution.json` documentation
+# `evolution.json`
 
-Default path: `outputs/evolution.json`
-Producer: `export_json.py`, called from `demo.py`.
+**Path:** `outputs/evolution.json` (or `outputs/runs/run_NNN/evolution.json` for batch runs)  
+**Producer:** `exports/evolution_json.py` via `experiment_runner.py` (called from `demo.py` → `batch_runner.py`)
 
----
+Not written when using `--show-plots`.
 
 ## Purpose
 
-Persists the full history of an evolutionary run to disk. During execution, that history only lives in RAM. The file is intended for:
+Full evolutionary history on disk for post-run analysis and Unity visualisation (accepted/rejected steps, per-context trajectories, `edgeTo` transition tables).
 
-- Post-run analysis
-- 3D visualisation in Unity
-- Inspecting Accepted and rejected generations
-- Reconstructing dynamics (`edgeTo`) for each generation without re-running the simulation
-
----
-
-## How it is generated
+## Generate
 
 ```bash
-python demo.py --n-genes 5 --generations 10000 --mutation-probability 0.1 --runs 100
+python demo.py --n-genes 5 --generations 1000 --runs 100
 ```
-
----
 
 ## Top-level schema
 
 ```text
 evolution.json
-├── schemaVersion          # format version
-├── nGenes                 # n (genes / bits per state)
+├── schemaVersion
+├── nGenes
 ├── stateCount             # 2^n
-├── genomeLength           # n · 2^n (for n=5 = 5 * 32 = 160 bits)
-├── mutationProbability    # p used in the run
-├── generationsRequested   # --generations limit
-├── generationsStored      # actual entries (may be less if stopped at fitness=1)
-├── contexts[]             # initial → target pairs (from config)
-├── summary                # global statistics
-└── generations[]          # one entry per generation
+├── genomeLength           # n · 2^n
+├── mutationProbability
+├── generationsRequested
+├── generationsStored
+├── contexts[]             # initial → target (from config.py)
+├── summary
+└── generations[]
     ├── generation
     ├── genome
     ├── fitness
     ├── accepted
     ├── changedBits
-    ├── contexts[]         # trajectories and fitness per context
-    └── edgeTo[]           # compact transition table
+    ├── contexts[]
+    └── edgeTo[]
 ```

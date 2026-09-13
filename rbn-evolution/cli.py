@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 from config import DEFAULT_N_GENES
 
@@ -49,6 +50,25 @@ def parse_args():
         help=(
             "Parallel workers for batch runs. Default: auto from CPU and RAM "
             "(reserves ~28 GB for OS/Unity/IDE and ~3 GB per run)."
+        ),
+    )
+
+    parser.add_argument(
+        "--shared-initial-genome",
+        action="store_true",
+        help=(
+            "Use one randomly generated initial genome for every run in the batch. "
+            "Each run still evolves independently from that shared starting network."
+        ),
+    )
+
+    parser.add_argument(
+        "--unity-streaming-assets",
+        type=Path,
+        default=None,
+        help=(
+            "Unity StreamingAssets folder where batch JSON exports are copied. "
+            "Overrides UNITY_STREAMING_ASSETS / RBN_UNITY_STREAMING_ASSETS."
         ),
     )
 
