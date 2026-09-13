@@ -1,6 +1,6 @@
-# Interactive-3D-visualisation-of-RBN-dynamics
+# gene-network-evolution-visualisation
 
-MSc Advanced Computer Science dissertation project: Interactive 3D visualisation of network dynamics.
+MSc Advanced Computer Science dissertation project: interactive 3D visualisation of random Boolean network evolution dynamics (Python pipeline + Unity viewer).
 
 ## Quick start
 
@@ -12,8 +12,9 @@ python demo.py --n-genes 5 --generations 1000 --runs 100
 
 **Dependencies:** `numpy`, `matplotlib`, `networkx` (see `rbn-evolution/requirements.txt`).
 
-- **Outputs:** `rbn-evolution/outputs/` (PNGs, CSVs, `evolution.json`).
-- **Unity JSON:** copied to Unity `Assets/StreamingAssets/` when saving (default: no `--show-plots`).
+- **Outputs:** `rbn-evolution/outputs/` (PNGs, CSVs, `evolution.json`; gitignored).
+- **Unity JSON:** copied to `unity/rbn-visualisation/Assets/StreamingAssets/` when saving (default: no `--show-plots`).
+- **After clone:** run `demo.py` once before opening Unity — StreamingAssets JSON are **not** in git (some exceed GitHub’s 100 MB limit). See `unity/rbn-visualisation/Assets/StreamingAssets/README.txt`.
 - **Interactive plots only:** add `--show-plots` (skips file export and batch analytics).
 
 ## Unity export path
@@ -59,8 +60,9 @@ rbn-evolution/           # Python pipeline
   docs/
   outputs/               # generated (gitignored)
 
-unity/rbn-visualisation/ # Unity 6000.3 project (Play demo)
+unity/rbn-visualisation/ # Unity 6000.3.17f1 project (Play demo)
   Assets/
+    StreamingAssets/     # JSON from demo.py (gitignored except README.txt)
   ProjectSettings/
   Packages/
 ```
@@ -69,5 +71,8 @@ JSON schema: [`rbn-evolution/docs/evolution_json.md`](rbn-evolution/docs/evoluti
 
 ## Unity
 
-1. Run `demo.py` (without `--show-plots`) to refresh StreamingAssets JSON.
-2. Open `unity/rbn-visualisation` in Unity and press Play.
+1. From repo root, run `demo.py` (without `--show-plots`) to generate StreamingAssets JSON.
+2. Open `unity/rbn-visualisation` in **Unity 6000.3.17f1** (Unity Hub).
+3. Open `Assets/Scenes/SampleScene.unity` and press **Play**.
+
+Menu views: genome MDS path, MDS + fitness, attractor landscape, shared-initial-genome MDS, batch MDS, batch MDS + fitness, plateau drift (dual pane). Details in [`unity/rbn-visualisation/README.md`](unity/rbn-visualisation/README.md).
