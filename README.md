@@ -18,7 +18,7 @@ python demo.py --n-genes 5 --generations 1000 --runs 100
 
 ## Unity export path
 
-Auto-detected if the repo layout is `DissertationProject/unity/rbn-visualisation/Assets/StreamingAssets`.
+Auto-detected at `unity/rbn-visualisation/Assets/StreamingAssets` in this repo (also supports a sibling `DissertationProject/unity/...` layout).
 
 Override only when Unity lives elsewhere:
 
@@ -50,14 +50,19 @@ The pipeline prints `Unity StreamingAssets export dir: ...` before copying JSON.
 ## Project layout
 
 ```
-rbn-evolution/
-  demo.py          # main pipeline
-  requirements.txt # Python dependencies
-  config.py        # contexts, paths, Unity export resolution
-  rbn/             # core logic
-  visualisation/   # plots and batch analytics
-  docs/            # JSON schema notes
-  outputs/         # generated
+rbn-evolution/           # Python pipeline
+  demo.py
+  requirements.txt
+  config.py
+  rbn/
+  visualisation/
+  docs/
+  outputs/               # generated (gitignored)
+
+unity/rbn-visualisation/ # Unity 6000.3 project (Play demo)
+  Assets/
+  ProjectSettings/
+  Packages/
 ```
 
 JSON schema: [`rbn-evolution/docs/evolution_json.md`](rbn-evolution/docs/evolution_json.md)

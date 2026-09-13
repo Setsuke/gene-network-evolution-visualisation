@@ -109,10 +109,11 @@ UNITY_BOOLEAN_ATTRACTOR_LANDSCAPE_JSON = (
 
 def _unity_streaming_assets_candidates() -> tuple[Path, ...]:
     """Known layouts relative to this package (rbn-evolution/)."""
+    repo_root = PROJECT_DIR.parent
     dissertation_root = PROJECT_DIR.parent.parent.parent
     return (
+        repo_root / "unity" / "rbn-visualisation" / "Assets" / "StreamingAssets",
         dissertation_root / "unity" / "rbn-visualisation" / "Assets" / "StreamingAssets",
-        PROJECT_DIR.parent.parent / "unity" / "rbn-visualisation" / "Assets" / "StreamingAssets",
         PROJECT_DIR / "unity" / "rbn-visualisation" / "Assets" / "StreamingAssets",
     )
 
