@@ -1,6 +1,8 @@
 # gene-network-evolution-visualisation
 
-MSc Advanced Computer Science dissertation project: interactive 3D visualisation of random Boolean network evolution dynamics (Python pipeline + Unity viewer).
+**Understanding Punctuated Equilibria through the Visualisation of Gene Network Evolution**
+
+MSc Advanced Computer Science dissertation — software repository (Python evolution pipeline + Unity 3D viewer for random Boolean network dynamics).
 
 ## Quick start
 

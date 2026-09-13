@@ -6,7 +6,7 @@ from config import DEFAULT_N_GENES
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="rbn-evolution: Random Boolean Network evolution demo"
+        description="rbn-evolution: gene network evolution pipeline (Punctuated Equilibria dissertation)"
     )
 
     parser.add_argument(
